@@ -251,6 +251,7 @@ export function Navigation() {
       <div
         className="mobile-overlay"
         style={{
+          display: "none",
           position: "fixed",
           inset: 0,
           zIndex: 200,

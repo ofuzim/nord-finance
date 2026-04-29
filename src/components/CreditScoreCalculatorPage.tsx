@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   calculateCreditScore,
   calculateCreditScoreCompletion,
@@ -119,22 +120,6 @@ function ScoreGauge({
         }}
       />
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-          <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
-          <span
-            style={{
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 500,
-              fontSize: 10,
-              letterSpacing: "0.24em",
-              textTransform: "uppercase",
-              color: "#C39529",
-            }}
-          >
-            Your Nord Credit Score
-          </span>
-        </div>
-
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
           <svg width="280" height="180" viewBox="0 0 280 180" aria-hidden="true">
             <path
@@ -215,7 +200,7 @@ function ScoreGauge({
               ? `${tier.rate} - ${tier.note}`
               : hasPreview
                 ? "Keep filling the form, then calculate to reveal your tier and offer."
-                : "Your indicative score and eligible tier will appear here."}
+                : "Your score and eligible financing tier will appear here."}
           </p>
         </div>
       </div>
@@ -274,207 +259,89 @@ function ResultsPanel({
   onEdit: () => void;
   onContinue: () => void;
 }) {
+  const name = firstName || "You";
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-      <div
-        style={{
-          border: "1px solid rgba(255,255,255,0.14)",
-          backgroundColor: "rgba(255,255,255,0.06)",
-          borderRadius: 16,
-          padding: "22px 24px",
-        }}
-      >
-        <p
-          style={{
-            color: "#C39529",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            marginBottom: 12,
-          }}
-        >
-          Results Ready
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Hero — the verdict */}
+      <ResultCard>
+        <p style={{ color: "#C39529", fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 18 }}>
+          Your Result
         </p>
-        <h2
-          style={{
-            fontFamily: "'Morpha', Georgia, serif", fontWeight: 400,
-            fontSize: "clamp(34px, 4vw, 56px)",
-            lineHeight: 1.05,
-            color: "white",
-          }}
-        >
-          Your indicative tier is
-          <br />
-          <em style={{ fontStyle: "normal", fontWeight: "bold" }}>{tier.name}.</em>
-        </h2>
-      </div>
+        <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: "clamp(22px, 2.4vw, 32px)", color: "white", lineHeight: 1.4, marginBottom: 10 }}>
+          {name === "You" ? "You scored" : `${name}, you scored`}{" "}
+          <span style={{ fontWeight: 700, color: tier.color }}>{score} / 1000</span>{" "}
+          and qualify for <span style={{ fontWeight: 700 }}>Nord vehicle financing.</span>
+        </p>
+        <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 24 }}>
+          Your profile places you in our <span style={{ color: tier.color, fontWeight: 600 }}>{tier.name}</span>. {tier.note}.
+        </p>
 
-      <ResultCard>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 10,
-            marginBottom: 28,
-          }}
-        >
-          <span style={{ fontFamily: "'Morpha', Georgia, serif", fontSize: "clamp(48px, 5vw, 72px)", fontWeight: 400, color: tier.color, lineHeight: 1 }}>{score}</span>
-          <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>/ 1000</span>
-        </div>
+        {/* Divider */}
+        <div style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)", marginBottom: 20 }} />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {breakdown.map((item) => (
-            <div key={item.key}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
-                <span style={{ color: "rgba(255,255,255,0.52)", fontSize: 12, letterSpacing: "0.05em" }}>
-                  {item.name} ({Math.round(item.weight * 100)}%)
-                </span>
-                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 700 }}>
-                  +{item.points} pts
-                </span>
-              </div>
-              <div style={{ height: 3, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
-                <div
-                  style={{
-                    width: `${item.score}%`,
-                    height: "100%",
-                    backgroundColor: tier.color,
-                    transition: "width 0.5s ease",
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </ResultCard>
-
-      <ResultCard>
-        <ResultEyebrow>Indicative Financing Offer</ResultEyebrow>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-          className="score-offer-grid"
-        >
+        {/* What this means in plain terms */}
+        <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.7)", marginBottom: 20 }}>What this means for you</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }} className="score-offer-grid">
           {[
-            { value: tier.rate, label: "Rate p.a." },
-            { value: tier.maxTenure, label: "Max Tenure" },
-            { value: tier.minDownPayment, label: "Min Down" },
-            { value: tier.name, label: "Your Tier" },
+            { label: "Interest Rate", value: tier.rate, desc: "per annum" },
+            { label: "Repayment Period", value: tier.maxTenure, desc: "maximum" },
+            { label: "Down Payment", value: tier.minDownPayment, desc: "minimum required" },
           ].map((item, i) => (
-            <div
-              key={item.label}
-              style={{
-                padding: "22px 20px",
-                borderLeft: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)",
-                backgroundColor: "rgba(0,0,0,0.16)",
-              }}
-              className="score-offer-item"
-            >
-              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.34)", marginBottom: 12 }}>
-                {item.label}
-              </p>
-              <p
-                style={{
-                  fontFamily: "'Poppins', sans-serif", fontWeight: 700,
-                  fontSize: item.label === "Your Tier" ? 30 : 36,
-                  lineHeight: 1.05,
-                  color: "white",
-                }}
-              >
-                {item.value}
-              </p>
+            <div key={item.label} style={{ padding: "0", borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.07)" : "none", paddingLeft: i > 0 ? 20 : 0 }} className="score-offer-item">
+              <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 6 }}>{item.label}</p>
+              <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: "clamp(16px, 1.8vw, 22px)", color: "white", lineHeight: 1, marginBottom: 4 }}>{item.value}</p>
+              <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{item.desc}</p>
             </div>
           ))}
         </div>
       </ResultCard>
 
+      {/* Signals — things to note */}
       <ResultCard>
-        <ResultEyebrow>Key Signals</ResultEyebrow>
+        <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 18 }}>Before you apply</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {signals.map((signal) => (
             <div key={signal.text} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  marginTop: 7,
-                  flexShrink: 0,
-                  backgroundColor:
-                    signal.tone === "red"
-                      ? "#ef4444"
-                      : signal.tone === "yellow"
-                        ? "#C39529"
-                        : "#22c55e",
-                }}
-              />
-              <span style={{ color: "rgba(255,255,255,0.58)", fontSize: 13, lineHeight: 1.7 }}>
-                {signal.text}
-              </span>
+              <span style={{
+                width: 7, height: 7, borderRadius: "50%", marginTop: 5, flexShrink: 0,
+                backgroundColor: signal.tone === "red" ? "#ef4444" : signal.tone === "yellow" ? "#C39529" : "#22c55e",
+              }} />
+              <span style={{ fontFamily: "'Poppins', sans-serif", color: "rgba(255,255,255,0.6)", fontSize: 13, lineHeight: 1.7 }}>{signal.text}</span>
             </div>
           ))}
         </div>
       </ResultCard>
 
+      {/* CTA */}
       <ResultCard tone="gold">
-        <ResultEyebrow>Ready for Review</ResultEyebrow>
-        <h3
-          style={{
-            fontFamily: "'Morpha', Georgia, serif", fontWeight: 400,
-            color: "white",
-            fontSize: "clamp(28px, 3vw, 42px)",
-            lineHeight: 1.08,
-            margin: "0 0 16px",
-          }}
-        >
-          Lock in your assessment. <br />
-          <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Complete your application.</em>
-        </h3>
-        <p style={{ color: "rgba(255,255,255,0.62)", fontSize: 14, lineHeight: 1.9, marginBottom: 24 }}>
-          {firstName ? `${firstName}, your` : "Your"} indicative score is {score}. The full application verifies your identity, vehicle interest, and documents so Nord Finance can confirm final terms.
+        <p className="score-cta-heading" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: "clamp(20px, 2.2vw, 28px)", color: "white", lineHeight: 1.4, marginBottom: 10 }}>
+          Ready to move forward?
         </p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <p className="score-cta-body" style={{ fontFamily: "'Poppins', sans-serif", color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.8, marginBottom: 24 }}>
+          Your score is based on the information you've provided. When you apply, we verify your identity and documents to confirm your final rate and repayment terms.
+        </p>
+        <div className="score-cta-buttons" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button
             type="button"
             onClick={onEdit}
             style={{
-              flex: "0 1 180px",
-              border: "1px solid rgba(255,255,255,0.14)",
-              background: "transparent",
-              color: "var(--text-muted)",
-              borderRadius: 100,
-              padding: "15px 20px",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              cursor: "pointer",
+              flex: 1, whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.14)",
+              background: "transparent", color: "var(--text-muted)", borderRadius: 100,
+              padding: "14px 20px", fontFamily: "'Poppins', sans-serif", fontSize: 11,
+              fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer",
             }}
           >
-            Recalculate
+            Recalculate My Score
           </button>
           <button
             onClick={onContinue}
             style={{
-              flex: "1 1 260px",
-              display: "block",
-              textAlign: "center",
-              border: "none",
-              backgroundColor: "#C39529",
-              color: "#000",
-              borderRadius: 100,
-              padding: "15px 20px",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              cursor: "pointer",
+              flex: 1, textAlign: "center", border: "none",
+              backgroundColor: "#C39529", color: "#000", borderRadius: 100,
+              padding: "14px 20px", fontFamily: "'Poppins', sans-serif", fontSize: 11,
+              fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer",
             }}
           >
             Start My Loan Application →
@@ -500,11 +367,10 @@ export function CreditScoreCalculatorPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   // Restore state from sessionStorage when landing on ?result=1
   useEffect(() => {
-    if (searchParams.get("result") !== "1") return;
+    if (new URLSearchParams(window.location.search).get("result") !== "1") return;
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
       if (!saved) return;
@@ -529,17 +395,20 @@ export function CreditScoreCalculatorPage() {
     obligations: false,
   });
 
-  // Wire sliders using el.oninput (matches the plain-HTML approach that works on iOS Safari)
+  // Mobile: el.oninput fires on iOS Safari where React delegation misses range input events.
+  // flushSync forces an immediate synchronous re-render so the display updates during drag.
   useEffect(() => {
     const incomeEl = incomeInputRef.current;
     if (incomeEl) {
       incomeEl.oninput = () => {
         const v = Number(incomeEl.value);
-        setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
-        setMonthlyIncome(v);
-        setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
-        setResultRevealed(false);
-        setIsCalculating(false);
+        flushSync(() => {
+          setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
+          setMonthlyIncome(v);
+          setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
+          setResultRevealed(false);
+          setIsCalculating(false);
+        });
         if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
       };
     }
@@ -547,11 +416,13 @@ export function CreditScoreCalculatorPage() {
     if (obligationsEl) {
       obligationsEl.oninput = () => {
         const v = Number(obligationsEl.value);
-        setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
-        setObligations(v);
-        setTouchedSliders(cur => ({ ...cur, obligations: true }));
-        setResultRevealed(false);
-        setIsCalculating(false);
+        flushSync(() => {
+          setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
+          setObligations(v);
+          setTouchedSliders(cur => ({ ...cur, obligations: true }));
+          setResultRevealed(false);
+          setIsCalculating(false);
+        });
         if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
       };
     }
@@ -559,10 +430,12 @@ export function CreditScoreCalculatorPage() {
     if (downPayEl) {
       downPayEl.oninput = () => {
         const v = Number(downPayEl.value);
-        setDownPayDisplay(`${v}%`);
-        setDownPayment(v);
-        setResultRevealed(false);
-        setIsCalculating(false);
+        flushSync(() => {
+          setDownPayDisplay(`${v}%`);
+          setDownPayment(v);
+          setResultRevealed(false);
+          setIsCalculating(false);
+        });
         if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
       };
     }
@@ -644,7 +517,7 @@ export function CreditScoreCalculatorPage() {
 
   useEffect(() => {
     if (!resultRevealed) return;
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     params.set("result", "1");
     router.push(`?${params.toString()}`, { scroll: false });
   }, [resultRevealed]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -919,6 +792,15 @@ export function CreditScoreCalculatorPage() {
                       step={250000}
                       defaultValue={0}
                       className="score-range"
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
+                        setMonthlyIncome(v);
+                        setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
+                        setResultRevealed(false);
+                        setIsCalculating(false);
+                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+                      }}
                     />
                   </div>
                 )}
@@ -939,6 +821,15 @@ export function CreditScoreCalculatorPage() {
                       step={100000}
                       defaultValue={0}
                       className="score-range"
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
+                        setObligations(v);
+                        setTouchedSliders(cur => ({ ...cur, obligations: true }));
+                        setResultRevealed(false);
+                        setIsCalculating(false);
+                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+                      }}
                     />
                   </div>
                 )}
@@ -959,6 +850,14 @@ export function CreditScoreCalculatorPage() {
                       step={5}
                       defaultValue={30}
                       className="score-range"
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setDownPayDisplay(`${v}%`);
+                        setDownPayment(v);
+                        setResultRevealed(false);
+                        setIsCalculating(false);
+                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+                      }}
                     />
                   </div>
                 )}
@@ -1001,6 +900,7 @@ export function CreditScoreCalculatorPage() {
             <button
               type="button"
               onClick={revealResult}
+              onTouchEnd={(e) => { e.preventDefault(); revealResult(); }}
               style={{
                 width: "100%",
                 border: "none",
@@ -1016,6 +916,8 @@ export function CreditScoreCalculatorPage() {
                 cursor: canCalculate && !isCalculating ? "pointer" : "not-allowed",
                 marginTop: 10,
                 opacity: isCalculating ? 0.72 : 1,
+                touchAction: "manipulation",
+                WebkitTapHighlightColor: "rgba(195,149,41,0.15)",
               }}
             >
               {isCalculating
@@ -1038,19 +940,47 @@ export function CreditScoreCalculatorPage() {
             }}
           >
             <ScoreGauge score={score} hasPreview={hasPreview} resultRevealed={showResult} />
-            <div
-              style={{
-                marginTop: 18,
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                padding: "16px 18px",
-                color: "var(--text-muted)",
-                fontSize: 12,
-                lineHeight: 1.7,
-              }}
-            >
-              Completion: <span style={{ color: "#C39529", fontWeight: 700 }}>{completion}%</span>. This calculator is indicative only and does not guarantee approval.
-            </div>
+            {showResult ? (
+              <div
+                style={{
+                  marginTop: 18,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 16,
+                  padding: "24px 22px",
+                }}
+              >
+                <p style={{ fontFamily: "'Poppins', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 18 }}>How your score was calculated</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {breakdown.map((item) => (
+                    <div key={item.key}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 7 }}>
+                        <span style={{ fontFamily: "'Poppins', sans-serif", color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+                          {item.name} <span style={{ color: "rgba(255,255,255,0.22)" }}>({Math.round(item.weight * 100)}%)</span>
+                        </span>
+                        <span style={{ fontFamily: "'Poppins', sans-serif", color: tier.color, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>+{item.points}</span>
+                      </div>
+                      <div style={{ height: 2, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ width: `${item.score}%`, height: "100%", backgroundColor: tier.color, transition: "width 0.6s ease" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: 18,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 12,
+                  padding: "16px 18px",
+                  color: "var(--text-muted)",
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                }}
+              >
+                Completion: <span style={{ color: "#C39529", fontWeight: 700 }}>{completion}%</span>. This calculator gives you an estimate based on your inputs. Final approval is subject to document verification.
+              </div>
+            )}
           </aside>
         </div>
       </section>
@@ -1127,6 +1057,8 @@ export function CreditScoreCalculatorPage() {
           }
         }
         @media (max-width: 700px) {
+          input, select, textarea { font-size: 1rem !important; }
+          .score-sidebar { display: none !important; }
           .score-hero,
           .score-layout {
             padding-left: 24px !important;
@@ -1173,13 +1105,31 @@ export function CreditScoreCalculatorPage() {
           }
           .score-offer-item {
             border-left: none !important;
-            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-left: 0 !important;
+            border-top: 1px solid rgba(255,255,255,0.08) !important;
+            padding-top: 16px !important;
+            padding-bottom: 16px !important;
           }
           .score-offer-item:first-child {
             border-top: none !important;
+            padding-top: 0 !important;
+          }
+          .score-offer-item:last-child {
+            padding-bottom: 0 !important;
           }
           .score-card {
             padding: 30px 22px !important;
+          }
+          .score-cta-heading, .score-cta-body {
+            text-align: center !important;
+          }
+          .score-cta-buttons {
+            flex-direction: column-reverse !important;
+          }
+          .score-cta-buttons button {
+            flex: none !important;
+            width: 100% !important;
+            text-align: center !important;
           }
         }
       `}</style>

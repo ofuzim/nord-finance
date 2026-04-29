@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import logoWhite from "../imports/nord-finance-logo.svg";
 import { Instagram, Linkedin, type LucideIcon } from "lucide-react";
+import { NordFinanceLogo } from "./NordFinanceLogo";
 
 function XLogo({ size = 15 }: { size?: number }) {
   return (
@@ -81,11 +81,9 @@ export function Footer() {
         >
           {/* Brand column */}
           <div>
-            <img
-              src={logoWhite.src}
-              alt="Nord Finance"
-              style={{ height: 52, width: "auto", marginBottom: 20 }}
-            />
+            <div style={{ marginBottom: 20 }}>
+              <NordFinanceLogo height={52} />
+            </div>
             <p
               style={{
                 fontFamily: "'Poppins', sans-serif",

@@ -1,7 +1,6 @@
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import { CreditScoreCalculatorPage } from '@/components/CreditScoreCalculatorPage'
-import { Suspense } from 'react'
 
 export const metadata = {
   title: 'Credit Score — Nord Finance',
@@ -19,9 +18,7 @@ export default function CreditScorePage() {
       }}
     >
       <Navigation />
-      <Suspense fallback={null}>
-        <CreditScoreCalculatorPage />
-      </Suspense>
+      <CreditScoreCalculatorPage />
       <Footer />
     </div>
   )

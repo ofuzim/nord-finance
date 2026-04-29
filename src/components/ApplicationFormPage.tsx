@@ -568,11 +568,12 @@ export function ApplicationFormPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 40 }} className="application-header-row">
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }} className="application-hero-eyebrow">
                   <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
                   <span style={{ color: "#C39529", fontSize: 10, fontWeight: 600, letterSpacing: "0.25em", textTransform: "uppercase" }}>
                     KYC Application
                   </span>
+                  <span className="application-hero-eyebrow-end" style={{ color: "#C39529", fontWeight: 700, fontSize: 12, display: "none" }}>//</span>
                 </div>
                 <h1
                   style={{
@@ -656,9 +657,9 @@ export function ApplicationFormPage() {
             </div>
           ) : (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 42 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 42 }} className="step-title-block">
                 <h2 style={{ fontFamily: "'Morpha', Georgia, serif", fontWeight: 400, fontSize: 30, color: "white" }}>{steps[currentStep - 1]}</h2>
-                <span style={{ color: "rgba(255,255,255,0.32)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}>Step {currentStep} of 4</span>
+                <span className="step-indicator" style={{ color: "rgba(255,255,255,0.32)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}>Step {currentStep} of 4</span>
               </div>
 
               {currentStep === 1 && (
@@ -1031,9 +1032,20 @@ export function ApplicationFormPage() {
           }
           .application-header-row {
             flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
           }
-          .application-grid,
-          .upload-grid {
+          .application-header-row h1,
+          .application-header-row p {
+            max-width: 100% !important;
+          }
+          .application-hero-eyebrow {
+            justify-content: center !important;
+          }
+          .application-hero-eyebrow-end {
+            display: inline !important;
+          }
+          .application-grid {
             grid-template-columns: 1fr !important;
           }
           .category-grid {
@@ -1041,14 +1053,20 @@ export function ApplicationFormPage() {
           }
         }
         @media (max-width: 600px) {
-          .category-grid {
-            grid-template-columns: 1fr !important;
+          input, select, textarea { font-size: 1rem !important; }
+          input[type="date"] { width: 100% !important; min-width: 0 !important; max-width: 100% !important; box-sizing: border-box !important; appearance: none !important; -webkit-appearance: none !important; }
+          .application-grid > *, .upload-grid > * { min-width: 0; overflow: hidden; }
+          .step-title-block {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 8px !important;
           }
           .application-actions {
-            flex-direction: column !important;
+            flex-direction: column-reverse !important;
           }
           .application-actions button {
-            width: 100%;
+            width: 100% !important;
           }
         }
       `}</style>

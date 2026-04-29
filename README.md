@@ -1,11 +1,35 @@
+# Nord Finance
 
-  # Generate website homepage
+Premium auto financing web app built with Next.js.
 
-  This is a code bundle for Generate website homepage. The original project is available at https://www.figma.com/design/wOb1Zce5VSFvmMAT4RibPT/Generate-website-homepage.
+## Getting started
 
-  ## Running the code
+```bash
+npm install
+```
 
-  Run `npm i` to install the dependencies.
+## Development (desktop only)
 
-  Run `npm run dev` to start the development server.
-  
+```bash
+npm run dev
+```
+
+Opens at [http://localhost:3000](http://localhost:3000).
+
+> **Note:** `next dev` uses Turbopack HMR scripts that reference `localhost` — this breaks React hydration on any device other than your laptop. Do not use it for mobile testing.
+
+## Testing on mobile
+
+Run a production build instead:
+
+```bash
+npm run build && npm run start
+```
+
+Find your laptop's local IP:
+
+```bash
+ipconfig getifaddr en0
+```
+
+Open `http://[your-ip]:3000` on your phone. Both devices must be on the same Wi-Fi network.

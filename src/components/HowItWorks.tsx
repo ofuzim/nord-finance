@@ -32,7 +32,6 @@ const STEP_THRESHOLDS = [0.05, 0.3, 0.55, 0.78];
 export function HowItWorks() {
   const [progress, setProgress] = useState(0);
   const [aboutProgress, setAboutProgress] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const aboutRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
 
@@ -42,8 +41,6 @@ export function HowItWorks() {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const windowH = window.innerHeight;
-        const mobile = window.matchMedia("(max-width: 960px)").matches;
-        setIsMobile(mobile);
 
         if (aboutRef.current) {
           const rect = aboutRef.current.getBoundingClientRect();
@@ -72,15 +69,11 @@ export function HowItWorks() {
   }, []);
 
   const stepProgress = (i: number) => {
-    if (isMobile) return 1;
-
     const t = STEP_THRESHOLDS[i];
     return Math.max(0, Math.min(1, (progress - t) / 0.18));
   };
 
   const badgeProgress = (delay: number) => {
-    if (isMobile) return 1;
-
     return Math.max(0, Math.min(1, (aboutProgress - delay) / 0.22));
   };
 
@@ -352,11 +345,6 @@ export function HowItWorks() {
           .steps-intro-label { justify-content: flex-start !important; gap: 10px !important; }
           .steps-intro-label-end { display: none !important; }
           .steps-intro p { max-width: 100% !important; }
-          .about-badge,
-          .how-step {
-            opacity: 1 !important;
-            transform: none !important;
-          }
           .how-steps { padding-left: 0 !important; }
           .how-track {
             top: 0 !important;
