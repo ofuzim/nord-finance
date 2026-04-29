@@ -71,6 +71,7 @@ export function ProductTiers() {
 
   return (
     <section
+      className="tiers-section"
       style={{
         backgroundColor: "#000",
         padding: "140px 0",
@@ -114,6 +115,7 @@ export function ProductTiers() {
         >
           <div>
             <div
+              className="tiers-eyebrow"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -136,6 +138,7 @@ export function ProductTiers() {
               </span>
             </div>
             <h2
+              className="tiers-title"
               style={{
                 fontFamily: "'Morpha', Georgia, serif",
                 fontWeight: 400,
@@ -422,6 +425,15 @@ export function ProductTiers() {
           .tiers-outer { padding: 0 40px !important; }
           .tiers-header { flex-direction: column !important; align-items: flex-start !important; }
           .tiers-sub { text-align: left !important; max-width: 100% !important; }
+        }
+        @media (max-width: 960px) {
+          .tiers-section { padding: 72px 0 !important; }
+          .tiers-header { gap: 14px !important; margin-bottom: 28px !important; }
+          .tiers-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .tiers-eyebrow span:first-child { font-size: 10px !important; }
+          .tiers-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .tiers-title { font-size: 30px !important; line-height: 1.08 !important; margin: 0 !important; }
+          .tiers-sub { font-size: 13px !important; line-height: 1.75 !important; margin: 0 !important; }
         }
         @media (max-width: 600px) {
           .tiers-grid { grid-template-columns: 1fr !important; }

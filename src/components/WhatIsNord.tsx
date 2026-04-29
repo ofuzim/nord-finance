@@ -142,13 +142,13 @@ export function WhatIsNord() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 64, gap: 40 }} className="what-header">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+            <div className="what-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
               <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
               <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529" }}>
                 Product Tiers
               </span>
             </div>
-            <h2 style={{
+            <h2 className="what-title" style={{
               fontFamily: "'Morpha', Georgia, serif",
               fontWeight: 400, fontSize: "clamp(38px, 3.8vw, 60px)",
               lineHeight: 1.08, color: "white", letterSpacing: "-0.02em",
@@ -170,6 +170,7 @@ export function WhatIsNord() {
           {tiers.map((tier, i) => (
             <div
               key={i}
+              className="what-card"
               onMouseEnter={() => setActiveIdx(i)}
               onMouseLeave={() => setActiveIdx(null)}
               style={{
@@ -197,7 +198,7 @@ export function WhatIsNord() {
 
               {/* Badge pill */}
               <div style={{ marginBottom: 20, position: "relative", zIndex: 1 }}>
-                <span style={{
+                <span className="what-card-badge" style={{
                   display: "inline-block",
                   fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 9,
                   letterSpacing: "0.18em", textTransform: "uppercase", color: tier.color,
@@ -207,7 +208,7 @@ export function WhatIsNord() {
                   {tier.badge}
                 </span>
                 {tier.featured && (
-                  <span style={{
+                  <span className="what-card-popular" style={{
                     marginLeft: 6,
                     display: "inline-block",
                     fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 8,
@@ -231,7 +232,7 @@ export function WhatIsNord() {
                 color: tier.color, lineHeight: 1, display: "block",
                 marginBottom: 6, position: "relative", zIndex: 1,
               }}>{tier.rate}</span>
-              <span style={{
+              <span className="what-card-rate-note" style={{
                 fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 10,
                 letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)",
                 marginBottom: 24, display: "block", position: "relative", zIndex: 1,
@@ -244,15 +245,15 @@ export function WhatIsNord() {
                 {tier.features.map((f, fi) => (
                   <li key={fi} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                     <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0, marginTop: 1 }}>—</span>
-                    <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{f}</span>
+                    <span className="what-card-feature" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{f}</span>
                   </li>
                 ))}
               </ul>
 
               {/* Score */}
               <div style={{ marginTop: 28, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1 }}>
-                <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>Score Required:</span>
-                <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 13, color: tier.color }}>{tier.score}</span>
+                <span className="what-card-score-label" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>Score Required:</span>
+                <span className="what-card-score" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 13, color: tier.color }}>{tier.score}</span>
               </div>
             </div>
           ))}
@@ -274,7 +275,7 @@ export function WhatIsNord() {
           }}
           className="plans-cta"
         >
-          <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 13, color: "rgba(255,255,255,0.66)", margin: 0, lineHeight: 1.7 }}>
+          <p className="plans-cta-text" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 13, color: "rgba(255,255,255,0.66)", margin: 0, lineHeight: 1.7 }}>
             Rates are indicative. Check your Nord Credit Score to see your likely tier before submitting a financing application.
           </p>
           <Link
@@ -306,9 +307,26 @@ export function WhatIsNord() {
           .what-sub { text-align: left !important; max-width: 100% !important; }
           .plans-cta { flex-direction: column !important; align-items: flex-start !important; }
         }
+        @media (max-width: 960px) {
+          .what-outer { padding: 72px 28px !important; }
+          .what-header { gap: 12px !important; margin-bottom: 28px !important; }
+          .what-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .what-eyebrow span:first-child { font-size: 10px !important; }
+          .what-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .what-title { font-size: 30px !important; line-height: 1.08 !important; margin: 0 !important; }
+          .what-sub { font-size: 14px !important; line-height: 1.8 !important; margin: 0 !important; }
+          .what-card-badge { font-size: 10px !important; letter-spacing: 0.16em !important; }
+          .what-card-popular { font-size: 9px !important; }
+          .what-card-rate-note { font-size: 11px !important; color: rgba(255,255,255,0.46) !important; }
+          .what-card-feature { font-size: 13px !important; line-height: 1.6 !important; color: rgba(255,255,255,0.68) !important; }
+          .what-card-score-label { font-size: 10px !important; color: rgba(255,255,255,0.42) !important; }
+          .what-card-score { font-size: 14px !important; }
+          .plans-cta { align-items: center !important; text-align: center !important; }
+          .plans-cta-text { font-size: 14px !important; line-height: 1.75 !important; color: rgba(255,255,255,0.72) !important; }
+        }
         @media (max-width: 600px) {
           .what-grid { grid-template-columns: 1fr !important; }
-          .what-outer { padding: 80px 24px !important; }
+          .what-outer { padding: 72px 24px !important; }
         }
       `}</style>
     </section>

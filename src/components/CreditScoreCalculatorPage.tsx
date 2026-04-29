@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -493,6 +493,9 @@ export function CreditScoreCalculatorPage() {
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [obligations, setObligations] = useState(0);
   const [downPayment, setDownPayment] = useState(30);
+  const [incomeDisplay, setIncomeDisplay] = useState('--');
+  const [obligationsDisplay, setObligationsDisplay] = useState('--');
+  const [downPayDisplay, setDownPayDisplay] = useState('30%');
   const [resultRevealed, setResultRevealed] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -518,10 +521,52 @@ export function CreditScoreCalculatorPage() {
   const resultStackRef = useRef<HTMLDivElement>(null);
   const formSectionRef = useRef<HTMLElement>(null);
   const calculationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const incomeInputRef = useRef<HTMLInputElement>(null);
+  const obligationsInputRef = useRef<HTMLInputElement>(null);
+  const downPayInputRef = useRef<HTMLInputElement>(null);
   const [touchedSliders, setTouchedSliders] = useState({
     monthlyIncome: false,
     obligations: false,
   });
+
+  // Wire sliders using el.oninput (matches the plain-HTML approach that works on iOS Safari)
+  useEffect(() => {
+    const incomeEl = incomeInputRef.current;
+    if (incomeEl) {
+      incomeEl.oninput = () => {
+        const v = Number(incomeEl.value);
+        setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
+        setMonthlyIncome(v);
+        setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
+        setResultRevealed(false);
+        setIsCalculating(false);
+        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+      };
+    }
+    const obligationsEl = obligationsInputRef.current;
+    if (obligationsEl) {
+      obligationsEl.oninput = () => {
+        const v = Number(obligationsEl.value);
+        setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
+        setObligations(v);
+        setTouchedSliders(cur => ({ ...cur, obligations: true }));
+        setResultRevealed(false);
+        setIsCalculating(false);
+        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+      };
+    }
+    const downPayEl = downPayInputRef.current;
+    if (downPayEl) {
+      downPayEl.oninput = () => {
+        const v = Number(downPayEl.value);
+        setDownPayDisplay(`${v}%`);
+        setDownPayment(v);
+        setResultRevealed(false);
+        setIsCalculating(false);
+        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+      };
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const completedSelects = creditScoreFieldKeys.filter((key) => values[key] !== undefined).length;
   const identityComplete = Boolean(identity.firstName.trim() && identity.lastName.trim() && identity.email.trim());
@@ -746,13 +791,14 @@ export function CreditScoreCalculatorPage() {
           className="score-hero"
         >
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+            <div className="score-hero-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
               <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
               <span style={{ fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529", fontWeight: 500 }}>
                 Nord Credit Score
               </span>
             </div>
             <h1
+              className="score-hero-title"
               style={{
                 fontFamily: "'Morpha', Georgia, serif",
                 fontWeight: 400,
@@ -768,6 +814,7 @@ export function CreditScoreCalculatorPage() {
             </h1>
           </div>
           <p
+            className="score-hero-copy"
             style={{
               fontSize: 15,
               lineHeight: 1.9,
@@ -861,22 +908,16 @@ export function CreditScoreCalculatorPage() {
                     <FieldLabel>Monthly Net Income (₦)</FieldLabel>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
-                        {touchedSliders.monthlyIncome ? `₦${monthlyIncome.toLocaleString("en-NG")}` : "--"}
-                      </span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{incomeDisplay}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦10M+</span>
                     </div>
                     <input
+                      ref={incomeInputRef}
                       type="range"
                       min={0}
                       max={10000000}
                       step={250000}
-                      value={monthlyIncome}
-                      onChange={(e) => {
-                        hideStaleResult();
-                        setTouchedSliders({ ...touchedSliders, monthlyIncome: true });
-                        setMonthlyIncome(Number(e.target.value));
-                      }}
+                      defaultValue={0}
                       className="score-range"
                     />
                   </div>
@@ -887,22 +928,16 @@ export function CreditScoreCalculatorPage() {
                     <FieldLabel>Existing Monthly Obligations (₦)</FieldLabel>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
-                        {touchedSliders.obligations ? `₦${obligations.toLocaleString("en-NG")}` : "--"}
-                      </span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{obligationsDisplay}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦5M+</span>
                     </div>
                     <input
+                      ref={obligationsInputRef}
                       type="range"
                       min={0}
                       max={5000000}
                       step={100000}
-                      value={obligations}
-                      onChange={(e) => {
-                        hideStaleResult();
-                        setTouchedSliders({ ...touchedSliders, obligations: true });
-                        setObligations(Number(e.target.value));
-                      }}
+                      defaultValue={0}
                       className="score-range"
                     />
                   </div>
@@ -913,21 +948,16 @@ export function CreditScoreCalculatorPage() {
                     <FieldLabel>Down Payment Percentage</FieldLabel>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>0%</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
-                        {downPayment}%
-                      </span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{downPayDisplay}</span>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>70%+</span>
                     </div>
                     <input
+                      ref={downPayInputRef}
                       type="range"
                       min={0}
                       max={70}
                       step={5}
-                      value={downPayment}
-                      onChange={(e) => {
-                        hideStaleResult();
-                        setDownPayment(Number(e.target.value));
-                      }}
+                      defaultValue={30}
                       className="score-range"
                     />
                   </div>
@@ -1030,14 +1060,40 @@ export function CreditScoreCalculatorPage() {
           width: 100%;
           accent-color: #C39529;
           margin-top: 12px;
+          height: 34px;
+          cursor: pointer;
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
         }
         .score-range::-webkit-slider-runnable-track {
-          height: 3px;
+          height: 5px;
           background: rgba(255,255,255,0.16);
           border-radius: 99px;
         }
         .score-range::-webkit-slider-thumb {
-          margin-top: -7px;
+          -webkit-appearance: none;
+          appearance: none;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #C39529;
+          border: 3px solid #050505;
+          box-shadow: 0 0 0 1px rgba(195,149,41,0.48), 0 8px 20px rgba(0,0,0,0.35);
+          margin-top: -9.5px;
+        }
+        .score-range::-moz-range-track {
+          height: 5px;
+          background: rgba(255,255,255,0.16);
+          border-radius: 99px;
+        }
+        .score-range::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: #C39529;
+          border: 3px solid #050505;
+          box-shadow: 0 0 0 1px rgba(195,149,41,0.48), 0 8px 20px rgba(0,0,0,0.35);
         }
         .score-loader {
           animation: scoreSpin 0.9s linear infinite;
@@ -1075,6 +1131,33 @@ export function CreditScoreCalculatorPage() {
           .score-layout {
             padding-left: 24px !important;
             padding-right: 24px !important;
+          }
+          .score-hero {
+            padding-top: 52px !important;
+            padding-bottom: 42px !important;
+            gap: 18px !important;
+          }
+          .score-hero-eyebrow {
+            gap: 10px !important;
+            margin-bottom: 16px !important;
+          }
+          .score-hero-eyebrow span:first-child {
+            font-size: 10px !important;
+          }
+          .score-hero-eyebrow span:last-child {
+            font-size: 9px !important;
+            letter-spacing: 0.2em !important;
+          }
+          .score-hero-title {
+            font-size: 38px !important;
+            line-height: 1.05 !important;
+            margin: 0 !important;
+          }
+          .score-hero-copy {
+            font-size: 13px !important;
+            line-height: 1.75 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
           }
           .score-field-grid {
             grid-template-columns: 1fr !important;

@@ -131,6 +131,7 @@ export function Navigation() {
       <input type="checkbox" id="nav-toggle" aria-hidden="true" />
 
       <nav
+        className="site-nav"
         style={{
           position: "fixed",
           top: 0,
@@ -140,6 +141,7 @@ export function Navigation() {
           transition: "all 0.3s ease",
           backgroundColor: scrolled ? "rgba(0,0,0,0.85)" : "transparent",
           backdropFilter: scrolled ? "blur(20px)" : "none",
+          WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
           borderBottom: scrolled ? "1px solid rgba(255,255,255,0.1)" : "1px solid transparent",
         }}
       >
@@ -285,6 +287,7 @@ export function Navigation() {
 
         {navLinks.map((link) => {
           const isActive = navLinkIsActive(link);
+          const words = link.label.split(" ");
           return (
             <Link
               key={link.href}
@@ -293,10 +296,9 @@ export function Navigation() {
               rel={link.external ? "noreferrer" : undefined}
               onClick={(e) => handleNavClick(e, link)}
               style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontWeight: 600,
-                fontSize: 22,
-                letterSpacing: "0.08em",
+                fontFamily: "'Morpha', Georgia, serif",
+                fontSize:32,
+                letterSpacing: "0.03em",
                 textTransform: "uppercase",
                 color: isActive ? "#C39529" : "white",
                 textDecoration: "none",
@@ -306,7 +308,15 @@ export function Navigation() {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#C39529")}
               onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? "#C39529" : "white")}
             >
-              {link.label}
+              {words.length === 1 ? (
+                <span style={{ fontWeight: 400 }}>{words[0]}</span>
+              ) : (
+                <>
+                  <span style={{ fontWeight: 700 }}>{words[0]}</span>
+                  {" "}
+                  <span style={{ fontWeight: 400 }}>{words.slice(1).join(" ")}</span>
+                </>
+              )}
             </Link>
           );
         })}
@@ -390,6 +400,7 @@ export function Navigation() {
 
       <button
         type="button"
+        className="back-to-top"
         aria-label="Back to top"
         onClick={handleBackToTop}
         style={{
@@ -410,11 +421,12 @@ export function Navigation() {
           justifyContent: "center",
           cursor: "pointer",
           boxShadow: "0 16px 35px rgba(0,0,0,0.35)",
+          "--back-top-y": showBackToTop ? "0" : "12px",
           opacity: showBackToTop ? 1 : 0,
           pointerEvents: showBackToTop ? "auto" : "none",
-          transform: showBackToTop ? "translateY(0)" : "translateY(12px)",
+          transform: "translateY(var(--back-top-y))",
           transition: "opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease",
-        }}
+        } as React.CSSProperties}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLElement;
           el.style.backgroundColor = "rgba(32,32,34,0.88)";
@@ -435,11 +447,23 @@ export function Navigation() {
         .nav-hamburger { display: none; }
 
         @media (max-width: 768px) {
+          .site-nav {
+            background-color: rgba(0,0,0,0.62) !important;
+            backdrop-filter: blur(22px) saturate(1.2) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(1.2) !important;
+            border-bottom: 1px solid transparent !important;
+          }
           .nav-inner { padding: 0 24px !important; }
           .nav-links { display: none !important; }
           .nav-apply { display: none !important; }
           .nav-hamburger { display: flex !important; align-items: center; justify-content: center; }
           #nav-toggle:checked ~ .mobile-overlay { display: flex !important; }
+          .back-to-top {
+            right: auto !important;
+            left: 50% !important;
+            bottom: 24px !important;
+            transform: translate(-50%, var(--back-top-y)) !important;
+          }
         }
       `}</style>
     </>

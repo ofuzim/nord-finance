@@ -82,6 +82,7 @@ export function LoanCalculator() {
 
   return (
     <section
+      className="calc-section"
       style={{
         backgroundColor: "#000",
         padding: "140px 0",
@@ -117,7 +118,7 @@ export function LoanCalculator() {
       >
         {/* Left — title + text */}
         <div style={{ flex: "0 0 50%", paddingTop: 8 }} className="calc-left">
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+          <div className="calc-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
             <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
             <span style={{
               fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 10,
@@ -126,7 +127,7 @@ export function LoanCalculator() {
               Run the Numbers
             </span>
           </div>
-          <h2 style={{
+          <h2 className="calc-title" style={{
             fontFamily: "'Morpha', Georgia, serif",
             fontWeight: 400, fontSize: "clamp(34px, 3.2vw, 54px)",
             lineHeight: 1.08, color: "white", letterSpacing: "-0.02em", marginBottom: 28,
@@ -134,7 +135,7 @@ export function LoanCalculator() {
             Calculate your{" "}
             <em style={{ fontStyle: "normal", fontWeight: "bold" }}>monthly payment.</em>
           </h2>
-          <p style={{
+          <p className="calc-description" style={{
             fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: 14,
             lineHeight: 1.9, color: "var(--text-muted)", marginBottom: 40,
           }}>
@@ -146,7 +147,7 @@ export function LoanCalculator() {
               { label: "Down Payment", value: `${Math.round(downPaymentRate * 100)}%` },
               { label: "Eligible Portfolio", value: selectedTier.portfolioNote },
             ].map((item, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.14)" }}>
                 <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 12, color: "var(--text-faint)", letterSpacing: "0.04em" }}>{item.label}</span>
                 <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 14, color: "#C39529" }}>{item.value}</span>
               </div>
@@ -547,8 +548,17 @@ export function LoanCalculator() {
           .calc-outer { flex-direction: column !important; padding: 0 40px !important; gap: 52px !important; }
           .calc-left { flex: 1 1 auto !important; padding-top: 0 !important; }
         }
+        @media (max-width: 960px) {
+          .calc-section { padding: 72px 0 !important; }
+          .calc-outer { padding: 0 28px !important; gap: 32px !important; }
+          .calc-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .calc-eyebrow span:first-child { font-size: 10px !important; }
+          .calc-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .calc-title { font-size: 30px !important; line-height: 1.08 !important; margin-bottom: 16px !important; }
+          .calc-description { font-size: 13px !important; line-height: 1.75 !important; margin-bottom: 24px !important; }
+        }
         @media (max-width: 768px) {
-          .calc-outer { padding: 0 24px !important; }
+          .calc-outer { padding: 0 24px !important; gap: 28px !important; }
           .calc-card { padding: 32px 24px !important; }
           .calc-inputs { grid-template-columns: 1fr !important; }
           .calc-breakdown { grid-template-columns: 1fr !important; }

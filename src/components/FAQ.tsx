@@ -39,7 +39,7 @@ function AccordionItem({
 }) {
   const isOpen = open === index;
   return (
-    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <div style={{ borderBottom: "1px solid rgba(255,255,255,0.18)" }}>
       <button
         onClick={() => onToggle(index)}
         style={{
@@ -87,7 +87,7 @@ export function FAQ() {
   const right = faqs.slice(3, 6);
 
   return (
-    <section style={{ backgroundColor: "#000", padding: "140px 0", position: "relative", overflow: "hidden" }}>
+    <section className="faq-section" style={{ backgroundColor: "#000", padding: "140px 0", position: "relative", overflow: "hidden" }}>
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: 1,
         background: "linear-gradient(90deg, transparent, rgba(195,149,41,0.3) 30%, rgba(195,149,41,0.3) 70%, transparent)",
@@ -98,13 +98,13 @@ export function FAQ() {
         {/* Header — title left, text right (same as WhatIsNord) */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 60, gap: 60 }} className="faq-header">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+            <div className="faq-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
               <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
               <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529" }}>
                 Resources & FAQ
               </span>
             </div>
-            <h2 style={{
+            <h2 className="faq-title" style={{
               fontFamily: "'Morpha', Georgia, serif",
               fontWeight: 400, fontSize: "clamp(34px, 3.4vw, 54px)",
               lineHeight: 1.08, color: "white", letterSpacing: "-0.02em",
@@ -124,12 +124,12 @@ export function FAQ() {
 
         {/* FAQ — 2-col accordion */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 56px", marginBottom: 72 }} className="faq-grid">
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)" }}>
             {left.map((faq, i) => (
               <AccordionItem key={i} faq={faq} index={i} open={open} onToggle={toggle} />
             ))}
           </div>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.18)" }}>
             {right.map((faq, i) => (
               <AccordionItem key={i + 3} faq={faq} index={i + 3} open={open} onToggle={toggle} />
             ))}
@@ -162,6 +162,17 @@ export function FAQ() {
           .faq-outer { padding: 0 40px !important; }
           .faq-header { flex-direction: column !important; align-items: flex-start !important; }
           .faq-sub { text-align: left !important; max-width: 100% !important; }
+        }
+        @media (max-width: 960px) {
+          .faq-section { padding: 72px 0 !important; }
+          .faq-outer { padding: 0 28px !important; }
+          .faq-header { gap: 12px !important; margin-bottom: 32px !important; }
+          .faq-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .faq-eyebrow span:first-child { font-size: 10px !important; }
+          .faq-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .faq-title { font-size: 30px !important; line-height: 1.08 !important; margin: 0 !important; }
+          .faq-sub { font-size: 13px !important; line-height: 1.75 !important; margin: 0 !important; }
+          .faq-grid { margin-bottom: 44px !important; }
         }
         @media (max-width: 768px) {
           .faq-outer { padding: 0 24px !important; }

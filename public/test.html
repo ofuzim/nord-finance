@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nord Finance — Credit Score</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#080808;--obsidian:#0f0f0f;--charcoal:#1a1a1a;--steel:#2a2a2a;
+  --muted:#5a5a5a;--ghost:#8a8a8a;--light:#d4d4d4;--white:#f5f3ef;
+  --gold:#c9a84c;--gold-light:#e8c97a;--gold-dim:rgba(201,168,76,0.12);
+  --red:#c94c4c;--green:#4cac7a;--orange:#c9844c;
+  --mono:'DM Mono',monospace;--serif:'Cormorant Garamond',serif;--sans:'Syne',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--black);color:var(--white);font-family:var(--sans);min-height:100vh;}
+
+.topbar{background:var(--obsidian);border-bottom:1px solid var(--steel);padding:16px 48px;display:flex;justify-content:space-between;align-items:center;}
+.topbar-logo{font-family:var(--serif);font-size:1.4rem;font-weight:300;letter-spacing:0.1em;text-decoration:none;color:var(--white);}
+.topbar-logo span{color:var(--gold);}
+.topbar-links{display:flex;gap:24px;}
+.topbar-link{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--ghost);text-decoration:none;transition:color 0.3s;}
+.topbar-link:hover{color:var(--gold);}
+.topbar-cta{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;background:var(--gold);color:var(--black);padding:8px 20px;text-decoration:none;transition:background 0.3s;}
+.topbar-cta:hover{background:var(--gold-light);}
+
+.hero-bar{background:var(--charcoal);border-bottom:1px solid var(--steel);padding:40px 48px;}
+.hero-bar-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;}
+.hero-tag{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.hero-title{font-family:var(--serif);font-size:clamp(1.8rem,3vw,2.8rem);font-weight:300;line-height:1.2;}
+.hero-title em{font-style:italic;color:var(--gold);}
+.hero-sub{font-family:var(--mono);font-size:0.65rem;color:var(--ghost);max-width:360px;line-height:1.8;letter-spacing:0.04em;text-align:right;}
+
+.layout{max-width:1200px;margin:0 auto;padding:48px;display:grid;grid-template-columns:1fr 400px;gap:48px;align-items:start;}
+
+/* FORM */
+.form-panel{}
+.group-header{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--gold);margin-bottom:18px;display:flex;align-items:center;gap:12px;}
+.group-header::after{content:'';flex:1;height:1px;background:var(--steel);}
+.group-weight{color:var(--muted);font-size:0.54rem;}
+.section-group{margin-bottom:36px;}
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.field-full{grid-column:1/-1;}
+
+.field-wrap{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ghost);}
+.field-label .req{color:var(--gold);}
+select,input[type="text"],input[type="email"]{
+  background:var(--charcoal);border:1px solid var(--steel);color:var(--white);
+  font-family:var(--mono);font-size:0.73rem;padding:11px 14px;width:100%;
+  outline:none;transition:border-color 0.3s;appearance:none;-webkit-appearance:none;
+}
+select:focus,input:focus{border-color:var(--gold);}
+select option{background:var(--charcoal);}
+input::placeholder{color:var(--muted);}
+
+.range-wrap{display:flex;flex-direction:column;gap:6px;}
+.range-row{display:flex;justify-content:space-between;align-items:center;}
+.range-val{font-family:var(--serif);font-size:1.3rem;font-weight:300;color:var(--gold);}
+input[type="range"]{width:100%;height:3px;background:var(--steel);outline:none;-webkit-appearance:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--gold);border-radius:50%;cursor:pointer;}
+
+.btn-calculate{width:100%;background:var(--gold);color:var(--black);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;padding:16px;border:none;cursor:pointer;margin-top:28px;transition:background 0.3s;font-weight:500;}
+.btn-calculate:hover{background:var(--gold-light);}
+.kyc-link{display:block;text-align:center;font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;color:var(--ghost);margin-top:14px;text-decoration:none;transition:color 0.3s;}
+.kyc-link:hover{color:var(--gold);}
+
+/* RESULT */
+.result-panel{position:sticky;top:32px;}
+.score-card{background:var(--obsidian);border:1px solid var(--steel);padding:36px 28px;margin-bottom:14px;}
+.score-card-tag{font-family:var(--mono);font-size:0.54rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--gold);margin-bottom:18px;}
+.gauge-wrap{position:relative;margin:0 auto 20px;width:220px;height:130px;}
+.gauge-svg{width:100%;height:100%;}
+.gauge-bg{fill:none;stroke:var(--charcoal);stroke-width:12;stroke-linecap:round;}
+.gauge-fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1),stroke 0.6s;}
+.gauge-center{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;}
+.gauge-num{font-family:var(--serif);font-size:3.2rem;font-weight:300;line-height:1;display:block;transition:color 0.6s;}
+.gauge-label{font-family:var(--mono);font-size:0.54rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);}
+.tier-badge-large{display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--mono);font-size:0.68rem;letter-spacing:0.15em;text-transform:uppercase;padding:10px 20px;margin-bottom:20px;border-radius:2px;transition:all 0.6s;}
+.score-breakdown{display:flex;flex-direction:column;gap:9px;}
+.breakdown-row{display:flex;flex-direction:column;gap:3px;}
+.breakdown-header{display:flex;justify-content:space-between;}
+.breakdown-name{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.06em;color:var(--ghost);}
+.breakdown-pts{font-family:var(--mono);font-size:0.58rem;color:var(--light);}
+.breakdown-bar{height:2px;background:var(--charcoal);}
+.breakdown-fill{height:100%;background:var(--gold);transition:width 1s ease;}
+
+.offer-card{background:var(--charcoal);border:1px solid var(--steel);padding:24px 28px;margin-bottom:14px;}
+.offer-title{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;}
+.offer-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.offer-item{display:flex;flex-direction:column;gap:3px;}
+.offer-val{font-family:var(--serif);font-size:1.5rem;font-weight:300;color:var(--white);}
+.offer-desc{font-family:var(--mono);font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+
+.risk-card{background:var(--charcoal);border:1px solid var(--steel);padding:22px 28px;}
+.risk-title{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.risk-flags{display:flex;flex-direction:column;gap:8px;}
+.flag{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:0.6rem;color:var(--ghost);letter-spacing:0.04em;}
+.flag-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.flag-green{background:var(--green);}
+.flag-yellow{background:var(--gold);}
+.flag-red{background:var(--red);}
+
+.next-step-card{background:var(--gold-dim);border:1px solid rgba(201,168,76,0.2);padding:20px 24px;margin-top:14px;}
+.next-step-title{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.next-step-body{font-family:var(--mono);font-size:0.62rem;color:var(--ghost);line-height:1.8;letter-spacing:0.04em;margin-bottom:16px;}
+.next-step-btn{display:block;background:var(--gold);color:var(--black);font-family:var(--mono);font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;padding:12px 24px;text-decoration:none;text-align:center;transition:background 0.3s;}
+.next-step-btn:hover{background:var(--gold-light);}
+
+@media(max-width:1024px){
+  .topbar{padding:16px 20px;}
+  .hero-bar{padding:32px 20px;}
+  .hero-bar-inner{flex-direction:column;align-items:flex-start;gap:12px;}
+  .hero-sub{text-align:left;}
+  .layout{grid-template-columns:1fr;padding:24px 20px;}
+  .result-panel{position:static;}
+  .fields-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-logo">Nord<span>.</span>Finance</a>
+  <div class="topbar-links">
+    <a href="/" class="topbar-link">Home</a>
+    <a href="http://www.nordmotion.com" target="_blank" class="topbar-link">Nord Automobiles</a>
+  </div>
+  <a href="/credit-score" class="topbar-cta">Full Application →</a>
+</div>
+
+<div class="hero-bar">
+  <div class="hero-bar-inner">
+    <div>
+      <div class="hero-tag">// Nord Credit Score</div>
+      <div class="hero-title">Check your score.<br><em>Know your tier.</em></div>
+    </div>
+    <div class="hero-sub">Enter your financial information to receive your indicative Nord Credit Score and financing tier in seconds. This is not a formal credit check.</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="form-panel">
+
+    <!-- IDENTITY (for personalization) -->
+    <div class="section-group">
+      <div class="group-header">Your Identity</div>
+      <div class="fields-grid">
+        <div class="field-wrap">
+          <label class="field-label">First Name <span class="req">*</span></label>
+          <input type="text" id="firstName" placeholder="First name" oninput="recalculate()">
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Last Name <span class="req">*</span></label>
+          <input type="text" id="lastName" placeholder="Last name" oninput="recalculate()">
+        </div>
+        <div class="field-wrap field-full">
+          <label class="field-label">Email Address <span class="req">*</span></label>
+          <input type="email" id="emailAddress" placeholder="your@email.com" oninput="recalculate()">
+        </div>
+      </div>
+    </div>
+
+    <!-- INCOME STABILITY (25%) -->
+    <div class="section-group">
+      <div class="group-header">Income Stability <span class="group-weight">(25%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap">
+          <label class="field-label">Employment Type</label>
+          <select id="employmentType" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Salaried (Govt / Blue-chip)</option>
+            <option value="90">Salaried (Private)</option>
+            <option value="75">Self-Employed / Business Owner</option>
+            <option value="50">Freelancer / Contract</option>
+            <option value="30">Informal / Undocumented</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Employment Duration</label>
+          <select id="employmentDuration" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">5+ years</option>
+            <option value="85">3–5 years</option>
+            <option value="65">1–3 years</option>
+            <option value="40">6–12 months</option>
+            <option value="15">&lt; 6 months</option>
+          </select>
+        </div>
+        <div class="field-wrap field-full">
+          <label class="field-label">Monthly Net Income (₦)</label>
+          <div class="range-wrap">
+            <div class="range-row">
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">₦0</span>
+              <span class="range-val" id="incomeDisplay">₦0</span>
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">₦10M+</span>
+            </div>
+            <input type="range" id="monthlyIncome" min="0" max="10000000" step="100000" value="0" oninput="updateIncome();recalculate()">
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Number of Income Sources</label>
+          <select id="incomeSources" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">3+ Sources</option>
+            <option value="80">2 Sources</option>
+            <option value="60">1 Source</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Income Documentation</label>
+          <select id="incomeDoc" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Bank Statement + Payslip</option>
+            <option value="80">Bank Statement Only</option>
+            <option value="55">Self-Declared</option>
+            <option value="20">None</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- CASHFLOW (20%) -->
+    <div class="section-group">
+      <div class="group-header">Cashflow Consistency <span class="group-weight">(20%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap">
+          <label class="field-label">Monthly Credits Consistency</label>
+          <select id="monthlyCreditPattern" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Very Consistent (&lt;10% variance)</option>
+            <option value="80">Consistent (10–25%)</option>
+            <option value="55">Moderate (25–50%)</option>
+            <option value="25">Irregular (&gt;50%)</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Account Overdraft History</label>
+          <select id="overdraftHistory" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Never</option>
+            <option value="70">Once (last 12mo)</option>
+            <option value="40">2–3 times</option>
+            <option value="10">Frequent</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Savings Behaviour</label>
+          <select id="savingsBehavior" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Regular Investor</option>
+            <option value="85">Regular Saver</option>
+            <option value="55">Occasional Saver</option>
+            <option value="20">No Savings Pattern</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">End-of-Month Balance</label>
+          <select id="eomBalance" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Consistently Positive (&gt;20%)</option>
+            <option value="80">Positive (5–20%)</option>
+            <option value="50">Near Zero</option>
+            <option value="15">Frequently Negative</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- DTI (20%) -->
+    <div class="section-group">
+      <div class="group-header">Debt-to-Income Ratio <span class="group-weight">(20%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap field-full">
+          <label class="field-label">Existing Monthly Obligations (₦)</label>
+          <div class="range-wrap">
+            <div class="range-row">
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">₦0</span>
+              <span class="range-val" id="debtDisplay">₦0</span>
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">₦5M+</span>
+            </div>
+            <input type="range" id="existingDebt" min="0" max="5000000" step="50000" value="0" oninput="updateDebt();recalculate()">
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Active Loan Count</label>
+          <select id="activeLoanCount" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">None</option>
+            <option value="85">1 Active Loan</option>
+            <option value="60">2 Active Loans</option>
+            <option value="30">3+ Active Loans</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Repayment History</label>
+          <select id="repaymentHistory" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">No defaults ever</option>
+            <option value="75">1 minor default (&gt;12mo ago)</option>
+            <option value="40">1–2 defaults (recent)</option>
+            <option value="10">3+ defaults / current NPL</option>
+            <option value="65">No credit history</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANKING (15%) -->
+    <div class="section-group">
+      <div class="group-header">Banking Behaviour <span class="group-weight">(15%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap">
+          <label class="field-label">Active Bank Accounts</label>
+          <select id="bankAccounts" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">3+ across banks</option>
+            <option value="80">2 accounts</option>
+            <option value="60">1 (Tier 1 bank)</option>
+            <option value="35">1 (Microfinance)</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Transaction Frequency</label>
+          <select id="txnFrequency" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Daily</option>
+            <option value="80">Weekly</option>
+            <option value="55">Monthly</option>
+            <option value="25">Infrequent</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Bank Relationship Age</label>
+          <select id="bankAge" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">7+ years</option>
+            <option value="85">3–7 years</option>
+            <option value="65">1–3 years</option>
+            <option value="35">&lt; 1 year</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">International Transactions</label>
+          <select id="intlTxn" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Regular (USD/GBP/EUR)</option>
+            <option value="75">Occasional</option>
+            <option value="50">None</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIGITAL (10%) -->
+    <div class="section-group">
+      <div class="group-header">Digital Footprint <span class="group-weight">(10%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap">
+          <label class="field-label">Digital Lending History</label>
+          <select id="digitalLending" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Used &amp; repaid fully (2+)</option>
+            <option value="75">Used &amp; repaid (1×)</option>
+            <option value="50">Never used</option>
+            <option value="10">Defaulted on digital loan</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">BVN / NIN Status</label>
+          <select id="bvnVerification" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">BVN + NIN Verified</option>
+            <option value="80">BVN Only</option>
+            <option value="40">Unverified</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Investment Platform Activity</label>
+          <select id="investPlatform" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Active investor</option>
+            <option value="65">Registered, inactive</option>
+            <option value="40">None</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Fintech / Mobile Money Usage</label>
+          <select id="fintechUsage" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Heavy user</option>
+            <option value="75">Moderate user</option>
+            <option value="40">Traditional bank only</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOWN PAYMENT (10%) -->
+    <div class="section-group">
+      <div class="group-header">Down Payment Strength <span class="group-weight">(10%)</span></div>
+      <div class="fields-grid">
+        <div class="field-wrap field-full">
+          <label class="field-label">Down Payment Percentage</label>
+          <div class="range-wrap">
+            <div class="range-row">
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">0%</span>
+              <span class="range-val" id="downPayDisplay">0%</span>
+              <span style="font-family:var(--mono);font-size:0.58rem;color:var(--muted)">70%+</span>
+            </div>
+            <input type="range" id="downPayPercent" min="0" max="70" step="5" value="0" oninput="updateDownPay();recalculate()">
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Source of Down Payment</label>
+          <select id="downPaySource" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Own Savings (Documented)</option>
+            <option value="80">Investment Liquidation</option>
+            <option value="60">Business Proceeds</option>
+            <option value="30">Gift / Family Support</option>
+            <option value="10">Borrowed</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Down Payment Readiness</label>
+          <select id="downPayTimeline" onchange="recalculate()">
+            <option value="">— Select —</option>
+            <option value="100">Ready Now</option>
+            <option value="70">Within 2 Weeks</option>
+            <option value="40">Within 1 Month</option>
+            <option value="15">&gt; 1 Month</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-calculate" onclick="recalculate()">CALCULATE MY SCORE</button>
+    <a href="/credit-score" class="kyc-link">Ready to apply? Complete your full KYC →</a>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div class="result-panel">
+    <div class="score-card">
+      <div class="score-card-tag">// Your Nord Credit Score</div>
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 220 130">
+          <path class="gauge-bg" d="M 18 112 A 92 92 0 0 1 202 112"/>
+          <path class="gauge-fill" id="gaugeFill" d="M 18 112 A 92 92 0 0 1 202 112"/>
+        </svg>
+        <div class="gauge-center">
+          <span class="gauge-num" id="scoreDisplay">—</span>
+          <div class="gauge-label">Nord Score</div>
+        </div>
+      </div>
+      <div class="tier-badge-large" id="tierBadge"><span>○</span> Complete fields to score</div>
+      <div class="score-breakdown" id="breakdown"></div>
+    </div>
+
+    <div class="offer-card" id="offerCard" style="display:none">
+      <div class="offer-title">// Indicative Financing Offer</div>
+      <div class="offer-grid">
+        <div class="offer-item"><div class="offer-val" id="offerRate">—</div><div class="offer-desc">Rate p.a.</div></div>
+        <div class="offer-item"><div class="offer-val" id="offerTenure">—</div><div class="offer-desc">Max Tenure</div></div>
+        <div class="offer-item"><div class="offer-val" id="offerDown">—</div><div class="offer-desc">Min Down</div></div>
+        <div class="offer-item"><div class="offer-val" id="offerTier">—</div><div class="offer-desc">Your Tier</div></div>
+      </div>
+    </div>
+
+    <div class="risk-card" id="riskCard" style="display:none">
+      <div class="risk-title">// Key Signals</div>
+      <div class="risk-flags" id="riskFlags"></div>
+    </div>
+
+    <div class="next-step-card" id="nextStepCard" style="display:none">
+      <div class="next-step-title">// Next Step</div>
+      <div class="next-step-body" id="nextStepBody"></div>
+      <a href="/credit-score" class="next-step-btn">Start Full Application →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEIGHTS={income:0.25,cashflow:0.20,dti:0.20,banking:0.15,digital:0.10,downpay:0.10};
+function getVal(id){const el=document.getElementById(id);return el?parseFloat(el.value)||0:0;}
+function updateIncome(){const v=document.getElementById('monthlyIncome').value;document.getElementById('incomeDisplay').textContent='₦'+parseInt(v).toLocaleString();}
+function updateDebt(){const v=document.getElementById('existingDebt').value;document.getElementById('debtDisplay').textContent='₦'+parseInt(v).toLocaleString();}
+function updateDownPay(){const v=document.getElementById('downPayPercent').value;document.getElementById('downPayDisplay').textContent=v+'%';}
+
+function calcIncome(){
+  const emp=getVal('employmentType'),dur=getVal('employmentDuration'),src=getVal('incomeSources'),doc=getVal('incomeDoc');
+  const income=parseInt(document.getElementById('monthlyIncome').value)||0;
+  let iq=0;
+  if(income>=5000000)iq=100;else if(income>=2000000)iq=85;else if(income>=1000000)iq=70;else if(income>=500000)iq=50;else if(income>=200000)iq=30;else iq=10;
+  const vals=[emp,dur,income?iq:0,src,doc].filter(v=>v>0);
+  return vals.length>=2?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function calcCashflow(){
+  const p=getVal('monthlyCreditPattern'),o=getVal('overdraftHistory'),s=getVal('savingsBehavior'),e=getVal('eomBalance');
+  const vals=[p,o,s,e].filter(v=>v>0);return vals.length>=2?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function calcDTI(){
+  const income=parseInt(document.getElementById('monthlyIncome').value)||0;
+  const debt=parseInt(document.getElementById('existingDebt').value)||0;
+  const loans=getVal('activeLoanCount'),repay=getVal('repaymentHistory');
+  let dtiS=80;
+  if(income>0){const r=debt/income;if(r<=0.2)dtiS=100;else if(r<=0.3)dtiS=85;else if(r<=0.4)dtiS=65;else if(r<=0.5)dtiS=40;else dtiS=5;}
+  const vals=[dtiS,loans,repay].filter(v=>v>0);return vals.length>=2?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function calcBanking(){
+  const a=getVal('bankAccounts'),t=getVal('txnFrequency'),b=getVal('bankAge'),i=getVal('intlTxn');
+  const vals=[a,t,b,i].filter(v=>v>0);return vals.length>=2?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function calcDigital(){
+  const d=getVal('digitalLending'),bvn=getVal('bvnVerification'),inv=getVal('investPlatform'),f=getVal('fintechUsage');
+  const vals=[d,bvn,inv,f].filter(v=>v>0);return vals.length>=2?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function calcDownpay(){
+  const pct=parseInt(document.getElementById('downPayPercent').value)||0;
+  const src=getVal('downPaySource'),tl=getVal('downPayTimeline');
+  let ps=0;
+  if(pct>=60)ps=100;else if(pct>=50)ps=95;else if(pct>=40)ps=85;else if(pct>=30)ps=70;else if(pct>=20)ps=45;else if(pct>=10)ps=20;
+  const vals=[ps,src,tl].filter(v=>v>0);return vals.length>=1?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function getTier(score){
+  if(score>=850)return{name:'Private Bridge',color:'#c94c4c',bg:'rgba(201,76,76,0.12)',rate:'9–12%',tenure:'6 months',down:'50%'};
+  if(score>=800)return{name:'Premium Tier',color:'#c9844c',bg:'rgba(201,132,76,0.12)',rate:'18%',tenure:'18 months',down:'30%'};
+  if(score>=700)return{name:'Core Tier',color:'#c9a84c',bg:'rgba(201,168,76,0.12)',rate:'22%',tenure:'36 months',down:'30%'};
+  if(score>=500)return{name:'Access Tier',color:'#4cac7a',bg:'rgba(76,172,122,0.12)',rate:'28%+',tenure:'48 months',down:'30–40%'};
+  return{name:'Not Eligible',color:'#c94c4c',bg:'rgba(201,76,76,0.08)',rate:'—',tenure:'—',down:'—'};
+}
+
+function recalculate(){
+  const factors={income:calcIncome(),cashflow:calcCashflow(),dti:calcDTI(),banking:calcBanking(),digital:calcDigital(),downpay:calcDownpay()};
+  const names={income:'Income Stability',cashflow:'Cashflow',dti:'Debt / Income',banking:'Banking',digital:'Digital',downpay:'Down Payment'};
+  const filled=Object.values(factors).filter(v=>v!==null);
+  if(filled.length<3){
+    document.getElementById('scoreDisplay').textContent='—';
+    document.getElementById('tierBadge').innerHTML='<span>○</span> Complete fields to score';
+    document.getElementById('tierBadge').style.cssText='background:rgba(42,42,42,0.5);color:#5a5a5a;border:1px solid #2a2a2a;';
+    document.getElementById('offerCard').style.display='none';
+    document.getElementById('riskCard').style.display='none';
+    document.getElementById('nextStepCard').style.display='none';
+    document.getElementById('breakdown').innerHTML='';
+    setGauge(0,'#2a2a2a');return;
+  }
+  let ws=0,wu=0;
+  for(const[k,v]of Object.entries(factors)){if(v!==null){ws+=v*WEIGHTS[k];wu+=WEIGHTS[k];}}
+  const raw=ws/wu;
+  const score=Math.min(900,Math.max(300,Math.round(300+(raw*6))));
+  const tier=getTier(score);
+  animateNum(document.getElementById('scoreDisplay'),score);
+  document.getElementById('scoreDisplay').style.color=tier.color;
+  setGauge(score,tier.color);
+  const badge=document.getElementById('tierBadge');
+  badge.style.cssText=`background:${tier.bg};color:${tier.color};border:1px solid ${tier.color}40;`;
+  badge.innerHTML=`<span>●</span> ${tier.name}`;
+  let html='';
+  for(const[k,v]of Object.entries(factors)){
+    const pct=v!==null?v:0;const pts=v!==null?Math.round(v*WEIGHTS[k]*6):0;
+    html+=`<div class="breakdown-row"><div class="breakdown-header"><span class="breakdown-name">${names[k]} (${(WEIGHTS[k]*100).toFixed(0)}%)</span><span class="breakdown-pts">${v!==null?'+'+pts+' pts':'—'}</span></div><div class="breakdown-bar"><div class="breakdown-fill" style="width:${pct}%;background:${tier.color}"></div></div></div>`;
+  }
+  document.getElementById('breakdown').innerHTML=html;
+  if(score>=500){
+    document.getElementById('offerCard').style.display='block';
+    document.getElementById('offerRate').textContent=tier.rate;
+    document.getElementById('offerTenure').textContent=tier.tenure;
+    document.getElementById('offerDown').textContent=tier.down;
+    document.getElementById('offerTier').textContent=tier.name;
+  }else{document.getElementById('offerCard').style.display='none';}
+  const income=parseInt(document.getElementById('monthlyIncome').value)||0;
+  const debt=parseInt(document.getElementById('existingDebt').value)||0;
+  const dti=income>0?debt/income:0;
+  const repay=getVal('repaymentHistory');
+  const downPct=parseInt(document.getElementById('downPayPercent').value)||0;
+  const flags=[];
+  if(repay===10)flags.push({c:'red',t:'Active default detected — this may affect eligibility'});
+  if(dti>0.5)flags.push({c:'red',t:`DTI at ${(dti*100).toFixed(0)}% exceeds 50% ceiling`});
+  if(dti>0.4&&dti<=0.5)flags.push({c:'yellow',t:'High DTI — likely limits tier placement'});
+  if(downPct<30)flags.push({c:'yellow',t:'Down payment below 30% minimum'});
+  if(score>=800)flags.push({c:'green',t:'Strong profile — Premium or Private tier eligible'});
+  if(score>=700&&score<800)flags.push({c:'green',t:'Good profile — Core Tier eligible'});
+  if(dti<=0.2&&income>0)flags.push({c:'green',t:'Excellent debt management'});
+  if(flags.length>0){
+    document.getElementById('riskCard').style.display='block';
+    document.getElementById('riskFlags').innerHTML=flags.slice(0,4).map(f=>`<div class="flag"><div class="flag-dot flag-${f.c}"></div>${f.t}</div>`).join('');
+  }else{document.getElementById('riskCard').style.display='none';}
+  const fn=document.getElementById('firstName').value;
+  if(score>=500){
+    document.getElementById('nextStepCard').style.display='block';
+    const name=fn?fn+', your':'Your';
+    document.getElementById('nextStepBody').textContent=`${name} indicative score is ${score}. To proceed with a formal application, complete your full KYC form — it takes less than 10 minutes.`;
+  }else{document.getElementById('nextStepCard').style.display='none';}
+}
+
+function setGauge(score,color){
+  const fill=document.getElementById('gaugeFill');
+  const total=289;
+  const n=Math.max(0,Math.min(1,(score-300)/600));
+  fill.style.strokeDasharray=total;fill.style.strokeDashoffset=total-(n*total);fill.style.stroke=color;
+}
+let numTimer=null;
+function animateNum(el,target){
+  if(numTimer)clearInterval(numTimer);
+  let cur=parseInt(el.textContent)||300;const step=(target-cur)/20;
+  numTimer=setInterval(()=>{cur+=step;if((step>0&&cur>=target)||(step<0&&cur<=target)){cur=target;clearInterval(numTimer);}el.textContent=Math.round(cur);},30);
+}
+</script>
+</body>
+</html>

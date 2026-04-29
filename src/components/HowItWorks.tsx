@@ -6,13 +6,13 @@ import churchImg from "../imports/Nord-A7-church-2.jpg";
 const steps = [
   {
     number: "01",
-    title: "Choose Your Vehicle",
-    desc: "Browse the Nord Automobiles portfolio. Select the vehicle that matches your aspirations and your tier.",
+    title: "Check Your Score",
+    desc: "Your Nord Credit Score is calculated from your financial profile. See your tier and eligible financing terms upfront.",
   },
   {
     number: "02",
-    title: "Check Your Score",
-    desc: "Your Nord Credit Score is calculated from your financial profile. See your tier and eligible financing terms upfront.",
+    title: "Choose Your Vehicle",
+    desc: "Browse the Nord Automobiles portfolio. Select the vehicle that matches your aspirations and your tier.",
   },
   {
     number: "03",
@@ -32,14 +32,18 @@ const STEP_THRESHOLDS = [0.05, 0.3, 0.55, 0.78];
 export function HowItWorks() {
   const [progress, setProgress] = useState(0);
   const [aboutProgress, setAboutProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const aboutRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let rafId: number;
     const onScroll = () => {
+      cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const windowH = window.innerHeight;
+        const mobile = window.matchMedia("(max-width: 960px)").matches;
+        setIsMobile(mobile);
 
         if (aboutRef.current) {
           const rect = aboutRef.current.getBoundingClientRect();
@@ -56,19 +60,29 @@ export function HowItWorks() {
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    window.visualViewport?.addEventListener("resize", onScroll);
     onScroll();
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.visualViewport?.removeEventListener("resize", onScroll);
       cancelAnimationFrame(rafId);
     };
   }, []);
 
   const stepProgress = (i: number) => {
+    if (isMobile) return 1;
+
     const t = STEP_THRESHOLDS[i];
     return Math.max(0, Math.min(1, (progress - t) / 0.18));
   };
 
-  const badgeProgress = (delay: number) => Math.max(0, Math.min(1, (aboutProgress - delay) / 0.22));
+  const badgeProgress = (delay: number) => {
+    if (isMobile) return 1;
+
+    return Math.max(0, Math.min(1, (aboutProgress - delay) / 0.22));
+  };
 
   return (
     <section
@@ -123,7 +137,7 @@ export function HowItWorks() {
             </div>
 
             {/* Card 1 — top-left, bleeding outside */}
-            <div style={{
+            <div className="about-badge" style={{
               position: "absolute", top: 24, left: -24,
               opacity: badgeProgress(0.12),
               transform: `translate3d(${-18 + badgeProgress(0.12) * 18}px, ${(1 - badgeProgress(0.12)) * 14}px, 0)`,
@@ -151,7 +165,7 @@ export function HowItWorks() {
             </div>
 
             {/* Card 2 — bottom-right, bleeding outside */}
-            <div style={{
+            <div className="about-badge" style={{
               position: "absolute", bottom: -20, right: -24,
               opacity: badgeProgress(0.46),
               transform: `translate3d(${42 - badgeProgress(0.46) * 42}px, ${(1 - badgeProgress(0.46)) * 48}px, 0) scale(${0.88 + badgeProgress(0.46) * 0.12})`,
@@ -186,67 +200,109 @@ export function HowItWorks() {
           </div>
 
           {/* Right — text */}
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
-              <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
-              <span style={{
-                fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 10,
-                letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529",
+          <div style={{ flex: 1 }} className="about-copy">
+            <div className="about-title">
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }} className="about-eyebrow">
+                <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
+                <span style={{
+                  fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 10,
+                  letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529",
+                }}>
+                  About Nord Finance
+                </span>
+              </div>
+
+              <h2 style={{
+                fontFamily: "'Morpha', Georgia, serif",
+                fontWeight: 400, fontSize: "clamp(34px, 3.4vw, 54px)",
+                lineHeight: 1.08, color: "white", letterSpacing: "-0.02em", marginBottom: 28,
               }}>
-                About Nord Finance
-              </span>
+                Vehicle ownership,{" "}
+                <em style={{ fontStyle: "normal", fontWeight: "bold" }}>reimagined</em>{" "}
+                through credit.
+              </h2>
             </div>
 
-            <h2 style={{
-              fontFamily: "'Morpha', Georgia, serif",
-              fontWeight: 400, fontSize: "clamp(34px, 3.4vw, 54px)",
-              lineHeight: 1.08, color: "white", letterSpacing: "-0.02em", marginBottom: 28,
-            }}>
-              Vehicle ownership,{" "}
-              <em style={{ fontStyle: "normal", fontWeight: "bold" }}>reimagined</em>{" "}
-              through credit.
-            </h2>
-
-            <p style={{
-              fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: 15,
-              lineHeight: 1.9, color: "var(--text-muted)", maxWidth: 480,
-            }}>
-              Nord Finance is the structured vehicle credit arm of Nord Automobiles
-              Limited. We don't just facilitate car purchases — we architect financing
-              solutions built around your financial reality. Every applicant is assessed,
-              scored, and matched to a credit tier that reflects who they are financially.
-            </p>
-
+            <div className="about-body">
+              <p style={{
+                fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: 15,
+                lineHeight: 1.9, color: "var(--text-muted)", maxWidth: 480,
+              }}>
+                Nord Finance is the structured vehicle credit arm of Nord Automobiles
+                Limited. We don't just facilitate car purchases — we architect financing
+                solutions built around your financial reality. Every applicant is assessed,
+                scored, and matched to a credit tier that reflects who they are financially.
+              </p>
+            </div>
           </div>
+        </div>
+
+        <div className="steps-intro" style={{ marginBottom: 44, textAlign: "center" }}>
+          <div className="steps-intro-label" style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 14,
+            marginBottom: 10,
+          }}>
+            <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
+            <span style={{
+            fontFamily: "'Poppins', sans-serif",
+            fontWeight: 500,
+            fontSize: 10,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "#C39529",
+          }}>
+            The Process
+          </span>
+            <span className="steps-intro-label-end" style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
+          </div>
+          <p style={{
+            fontFamily: "'Poppins', sans-serif",
+            fontWeight: 300,
+            fontSize: 14,
+            lineHeight: 1.8,
+            color: "var(--text-muted)",
+            maxWidth: 620,
+            margin: "0 auto",
+          }}>
+            From vehicle selection to final approval, every step is structured to keep
+            your financing journey clear, predictable, and built around your profile.
+          </p>
         </div>
 
         {/* Steps — timeline style */}
         <div ref={stepsRef} style={{ position: "relative" }} className="how-steps">
 
           {/* Track line (full width, muted) */}
-          <div style={{
+          <div className="how-track" style={{
             position: "absolute", top: 28, left: "12.5%", right: "12.5%", height: 1,
             backgroundColor: "rgba(195,149,41,0.15)",
           }}>
             {/* Animated fill line */}
-            <div style={{
+            <div className="how-track-fill" style={{
               position: "absolute", top: 0, left: 0, bottom: 0,
               backgroundColor: "#C39529",
               width: `${progress * 100}%`,
             }} />
           </div>
 
-          <div style={{ display: "flex" }}>
+          <div className="how-steps-list" style={{ display: "flex" }}>
             {steps.map((step, i) => (
-              <div key={i} style={{
-                flex: 1,
-                display: "flex", flexDirection: "column", alignItems: "center",
-                textAlign: "center",
-                opacity: stepProgress(i),
-                transform: `translateY(${(1 - stepProgress(i)) * 20}px)`,
-              }}>
+              <div
+                key={i}
+                className="how-step"
+                style={{
+                  flex: 1,
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  textAlign: "center",
+                  opacity: stepProgress(i),
+                  transform: `translateY(${(1 - stepProgress(i)) * 20}px)`,
+                }}
+              >
                 {/* Circle */}
-                <div style={{
+                <div className="how-step-circle" style={{
                   width: 56, height: 56, borderRadius: "50%",
                   border: "1.5px solid #C39529",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -259,15 +315,17 @@ export function HowItWorks() {
                   }}>{step.number}</span>
                 </div>
 
-                <h3 style={{
-                  fontFamily: "'Poppins', sans-serif", fontWeight: 700,
-                  fontSize: 16, color: "white", marginBottom: 12, letterSpacing: "0.01em",
-                }}>{step.title}</h3>
-                <p style={{
-                  fontFamily: "'Poppins', sans-serif", fontWeight: 300,
-                  fontSize: 13, lineHeight: 1.75, color: "var(--text-muted)",
-                  maxWidth: 200,
-                }}>{step.desc}</p>
+                <div className="how-step-copy">
+                  <h3 style={{
+                    fontFamily: "'Poppins', sans-serif", fontWeight: 700,
+                    fontSize: 16, color: "white", marginBottom: 12, letterSpacing: "0.01em",
+                  }}>{step.title}</h3>
+                  <p style={{
+                    fontFamily: "'Poppins', sans-serif", fontWeight: 300,
+                    fontSize: 13, lineHeight: 1.75, color: "var(--text-muted)",
+                    maxWidth: 200,
+                  }}>{step.desc}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -277,11 +335,65 @@ export function HowItWorks() {
 
       <style>{`
         @media (max-width: 960px) {
-          .how-outer { padding: 80px 28px !important; }
-          .about-block { flex-direction: column !important; gap: 40px !important; margin-bottom: 72px !important; }
-          .about-img { flex: 1 1 auto !important; width: 100% !important; }
+          #learn-more { padding: 60px 0 !important; }
+          .how-outer { padding: 0 28px !important; }
+          .about-block { flex-direction: column !important; gap: 28px !important; margin-bottom: 40px !important; }
+          .about-copy { display: contents !important; }
+          .about-title { order: 1 !important; flex: none !important; width: 100% !important; }
+          .about-eyebrow { gap: 10px !important; margin-bottom: 20px !important; }
+          .about-eyebrow span:first-child { font-size: 10px !important; }
+          .about-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .about-title h2 { font-size: 30px !important; line-height: 1.08 !important; margin-bottom: 0 !important; }
+          .about-img { order: 2 !important; flex: 1 1 auto !important; width: 100% !important; }
           .about-img img { height: 300px !important; }
-          .how-steps > div { flex-direction: column !important; gap: 40px !important; }
+          .about-body { order: 3 !important; flex: none !important; width: 100% !important; }
+          .about-body p { max-width: 100% !important; }
+          .steps-intro { margin-bottom: 28px !important; text-align: left !important; }
+          .steps-intro-label { justify-content: flex-start !important; gap: 10px !important; }
+          .steps-intro-label-end { display: none !important; }
+          .steps-intro p { max-width: 100% !important; }
+          .about-badge,
+          .how-step {
+            opacity: 1 !important;
+            transform: none !important;
+          }
+          .how-steps { padding-left: 0 !important; }
+          .how-track {
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 27px !important;
+            right: auto !important;
+            width: 1px !important;
+            height: auto !important;
+            background-color: #C39529 !important;
+          }
+          .how-track-fill {
+            width: 1px !important;
+            height: 100% !important;
+          }
+          .how-steps-list { flex-direction: column !important; gap: 40px !important; }
+          .how-step {
+            flex-direction: row !important;
+            align-items: flex-start !important;
+            text-align: left !important;
+            gap: 20px !important;
+          }
+          .how-step-circle { width: 56px !important; height: 56px !important; margin-bottom: 0 !important; }
+          .how-step-circle span { font-size: 13px !important; }
+          .how-step:last-child .how-step-circle::after {
+            content: "" !important;
+            position: absolute !important;
+            top: calc(50% + 1px) !important;
+            left: 50% !important;
+            width: 4px !important;
+            height: 120vh !important;
+            background: #000 !important;
+            transform: translateX(-50%) !important;
+            z-index: -1 !important;
+          }
+          .how-step-copy { padding-top: 5px !important; }
+          .how-step-copy h3 { font-size: 16px !important; margin-bottom: 12px !important; }
+          .how-step-copy p { max-width: none !important; font-size: 13px !important; line-height: 1.75 !important; }
           .how-header { flex-direction: column !important; }
         }
       `}</style>

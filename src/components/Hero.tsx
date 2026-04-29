@@ -21,6 +21,7 @@ const stats = [
 export function Hero() {
   return (
     <section
+      className="hero-section"
       style={{
         position: "relative",
         height: "100vh",
@@ -31,16 +32,19 @@ export function Hero() {
     >
       {/* Full-bleed background */}
       <div
+        className="hero-bg"
         style={{
           position: "absolute",
           inset: 0,
           backgroundImage: `url(${heroBg.src})`,
           backgroundSize: "cover",
           backgroundPosition: "60% center",
+          backgroundRepeat: "no-repeat",
         }}
       />
       {/* Left-heavy black gradient */}
       <div
+        className="hero-side-gradient"
         style={{
           position: "absolute",
           inset: 0,
@@ -50,6 +54,7 @@ export function Hero() {
       />
       {/* Bottom fade */}
       <div
+        className="hero-bottom-fade"
         style={{
           position: "absolute",
           inset: 0,
@@ -131,13 +136,13 @@ export function Hero() {
               maxWidth: 480,
             }}
           >
-            Nord Finance is not a loan provider. It is a structured credit
+            Nord Finance is not just a loan provider. It is a structured credit
             system that matches your financial profile to the vehicle and
             financing terms that work for you.
           </p>
         </div>
 
-        {/* ── Row 1 / Col 2 — gauge centered ── */}
+        {/* ── Row 1 / Col 2 — gauge centered (desktop) ── */}
         <div
           style={{
             gridColumn: "2",
@@ -148,9 +153,12 @@ export function Hero() {
           }}
           className="hero-widget"
         >
-          <div className="hero-widget-scale">
-            <NordCreditScoreWidget score={824} size={440} variant="hero" />
-          </div>
+          <NordCreditScoreWidget score={824} size={440} variant="hero" />
+        </div>
+
+        {/* ── Mobile gauge — native size, no CSS scaling ── */}
+        <div className="hero-widget-mobile" style={{ gridColumn: "1", gridRow: "1", justifyContent: "center" }}>
+          <NordCreditScoreWidget score={824} size={260} variant="hero" />
         </div>
 
         {/* ── Row 2 / Col 1 — CTAs ── */}
@@ -225,6 +233,7 @@ export function Hero() {
             href="https://nordmotion.com/"
             target="_blank"
             rel="noreferrer"
+            className="hero-view-vehicles"
             style={{
               display: "flex",
               alignItems: "center",
@@ -234,6 +243,8 @@ export function Hero() {
               fontSize: 13,
               color: "var(--text-muted)",
               textDecoration: "none",
+              borderBottom: "1px solid rgba(195,149,41,0.25)",
+              paddingBottom: 4,
               transition: "color 0.2s ease",
               whiteSpace: "nowrap",
             }}
@@ -353,20 +364,42 @@ export function Hero() {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
+        .hero-widget-mobile { display: none; }
+
         @media (max-width: 960px) {
+          .hero-section { height: auto !important; min-height: 0 !important; padding-bottom: 60px; }
+          .hero-bg {
+            background-size: 180% auto !important;
+            background-position: top center !important;
+            opacity: 0.62 !important;
+          }
+          .hero-side-gradient {
+            background: linear-gradient(180deg, #000 0%, rgba(0,0,0,0.78) 12%, rgba(0,0,0,0.18) 34%, rgba(0,0,0,0.2) 46%, rgba(0,0,0,0.95) 76%, #000 100%) !important;
+          }
+          .hero-bottom-fade {
+            background: linear-gradient(180deg, transparent 28%, rgba(0,0,0,0.62) 58%, #000 88%) !important;
+          }
+
           .hero-grid {
             grid-template-columns: 1fr !important;
             grid-template-rows: auto !important;
-            padding: 76px 28px 40px !important;
-            row-gap: 16px !important;
+            align-content: start !important;
+            align-items: start !important;
+            padding-top: 88px !important;
+            padding-left: 28px !important;
+            padding-right: 28px !important;
+            padding-bottom: 40px !important;
+            row-gap: 4px !important;
           }
-          .hero-widget { display: flex !important; grid-column: 1 !important; grid-row: 1 !important; justify-content: center !important; align-items: flex-start !important; overflow: hidden !important; width: 100% !important; }
-          .hero-widget-scale { transform: scale(0.5); transform-origin: top center; margin-bottom: -171px; }
+          .hero-widget { display: none !important; }
+          .hero-widget-mobile { display: flex !important; grid-column: 1 !important; grid-row: 1 !important; }
           .widget-pill { display: none !important; }
           .hero-text { grid-column: 1 !important; grid-row: 2 !important; padding-top: 0 !important; justify-content: flex-start !important; text-align: center !important; align-items: center !important; }
           .hero-text p { max-width: 100% !important; }
-          .hero-label-row { justify-content: center !important; }
-          .hero-ctas { grid-column: 1 !important; grid-row: 3 !important; padding-bottom: 0 !important; justify-content: center !important; }
+          .hero-label-row { justify-content: center !important; margin-bottom: 14px !important; }
+          .hero-ctas { grid-column: 1 !important; grid-row: 3 !important; padding-bottom: 0 !important; justify-content: center !important; margin-top: 20px !important; }
+          .hero-headline { margin-bottom: 12px !important; }
+          .hero-view-vehicles { margin-top: 12px !important; }
           .hero-stats { display: none !important; }
           .hero-headline { font-size: clamp(44px, 8vw, 68px) !important; }
         }

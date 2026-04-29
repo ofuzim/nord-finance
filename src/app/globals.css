@@ -156,6 +156,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@media (max-width: 960px) {
+  .sec-label { margin-bottom: 12px !important; }
+  .sec-h2 { margin-bottom: 16px !important; }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

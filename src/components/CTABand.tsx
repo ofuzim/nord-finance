@@ -7,6 +7,7 @@ import carBg from "../imports/C3-6-2.jpg";
 export function CTABand() {
   return (
     <section
+      className="cta-band"
       style={{
         position: "relative",
         backgroundColor: "#000",
@@ -64,6 +65,7 @@ export function CTABand() {
       >
         {/* Label */}
         <div
+          className="cta-eyebrow"
           style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}
         >
           <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
@@ -84,6 +86,7 @@ export function CTABand() {
 
         {/* Headline with decorative rule lines flanking */}
         <div
+          className="cta-title-wrap"
           style={{
             display: "flex",
             alignItems: "center",
@@ -103,6 +106,7 @@ export function CTABand() {
           </div>
 
           <h2
+            className="cta-title"
             style={{
               fontFamily: "'Morpha', Georgia, serif",
               fontWeight: 400,
@@ -115,6 +119,7 @@ export function CTABand() {
             }}
           >
             Drive Beyond{" "}
+            <br />
             <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Expectations.</em>
           </h2>
 
@@ -129,6 +134,7 @@ export function CTABand() {
         </div>
 
         <p
+          className="cta-description"
           style={{
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 300,
@@ -232,7 +238,15 @@ export function CTABand() {
 
       <style>{`
         @media (max-width: 768px) {
-          .cta-inner { padding: 80px 28px 48px !important; }
+          .cta-band { min-height: 0 !important; }
+          .cta-inner { padding: 72px 28px 48px !important; }
+          .cta-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .cta-eyebrow span:first-child,
+          .cta-eyebrow span:last-child { font-size: 10px !important; }
+          .cta-eyebrow span:nth-child(2) { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .cta-title-wrap { margin-bottom: 16px !important; }
+          .cta-title { font-size: 38px !important; line-height: 1.06 !important; margin: 0 !important; }
+          .cta-description { font-size: 13px !important; line-height: 1.75 !important; margin-bottom: 28px !important; }
           .cta-rule { display: none !important; }
         }
       `}</style>

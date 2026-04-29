@@ -23,6 +23,7 @@ export function CarShowcase() {
 
   return (
     <section
+      className="showcase-section"
       style={{
         backgroundColor: "#000",
         padding: "120px 0 100px",
@@ -55,7 +56,7 @@ export function CarShowcase() {
         className="showcase-header"
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+          <div className="showcase-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
             <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
             <span
               style={{
@@ -71,6 +72,7 @@ export function CarShowcase() {
             </span>
           </div>
           <h2
+            className="showcase-title"
             style={{
               fontFamily: "'Morpha', Georgia, serif",
               fontWeight: 400,
@@ -128,7 +130,10 @@ export function CarShowcase() {
           display: "flex",
           gap: 16,
           overflowX: "auto",
-          paddingLeft: 80,
+          width: "calc(100% - max(80px, calc((100vw - 1440px) / 2 + 80px)))",
+          marginLeft: "max(80px, calc((100vw - 1440px) / 2 + 80px))",
+          boxSizing: "border-box",
+          paddingLeft: 0,
           paddingRight: 80,
           paddingBottom: 8,
           scrollbarWidth: "none",
@@ -237,7 +242,7 @@ export function CarShowcase() {
       </div>
 
       {/* View All */}
-      <div style={{ textAlign: "center", marginTop: 52 }}>
+      <div className="showcase-view-all" style={{ textAlign: "center", marginTop: 52 }}>
         <a
           href="/nord-automobiles"
           style={{
@@ -265,11 +270,42 @@ export function CarShowcase() {
       <style>{`
         .showcase-track::-webkit-scrollbar { display: none; }
         .showcase-card:hover .showcase-card-img { transform: scale(1.05); }
-        @media (max-width: 768px) {
-          .showcase-header { padding: 0 28px !important; flex-direction: column !important; align-items: flex-start !important; gap: 24px; }
-          .showcase-track { padding-left: 28px !important; padding-right: 28px !important; }
-          .showcase-card { min-width: 280px !important; height: 360px !important; }
+        @media (max-width: 960px) {
+          .showcase-section { padding: 72px 0 64px !important; }
+          .showcase-header {
+            padding: 0 var(--showcase-mobile-pad, 28px) !important;
+            margin-bottom: 28px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 14px !important;
+          }
+          .showcase-eyebrow { gap: 10px !important; margin-bottom: 14px !important; }
+          .showcase-eyebrow span:first-child { font-size: 10px !important; }
+          .showcase-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
+          .showcase-title { font-size: 30px !important; line-height: 1.08 !important; margin: 0 !important; }
+          .showcase-track {
+            width: calc(100% - var(--showcase-mobile-pad, 28px)) !important;
+            box-sizing: border-box !important;
+            gap: 12px !important;
+            margin-left: var(--showcase-mobile-pad, 28px) !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding-left: 0 !important;
+            padding-right: 24px !important;
+            scroll-snap-type: x proximity !important;
+            touch-action: pan-x pan-y pinch-zoom !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .showcase-card {
+            flex: 0 0 74vw !important;
+            width: 74vw !important;
+            min-width: 0 !important;
+            max-width: 270px !important;
+            height: 290px !important;
+            scroll-snap-align: start !important;
+          }
           .showcase-arrows { display: none !important; }
+          .showcase-view-all { margin-top: 32px !important; }
         }
       `}</style>
     </section>
