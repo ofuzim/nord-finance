@@ -1,0 +1,1105 @@
+'use client'
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  calculateCreditScore,
+  calculateCreditScoreCompletion,
+  creditScoreFieldKeys,
+  creditScoreSelectOptions,
+  creditScoreSections,
+  getApplicationUrl,
+  getCreditScoreBreakdown,
+  getCreditScoreSignals,
+  getCreditScoreTier,
+  type CreditScoreBreakdown,
+  type CreditScoreSignal,
+  type CreditScoreTier,
+} from "@/lib/creditScoreModel";
+
+const DEBUG_BYPASS_SCORE_COMPLETION =
+  process.env.NEXT_PUBLIC_BYPASS_COMPLETION === "true";
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label
+      style={{
+        display: "block",
+        fontFamily: "'Poppins', sans-serif",
+        fontWeight: 500,
+        fontSize: 10,
+        letterSpacing: "0.16em",
+        textTransform: "uppercase",
+        color: "var(--text-muted)",
+        marginBottom: 10,
+      }}
+    >
+      {children}
+    </label>
+  );
+}
+
+function fieldStyle(): React.CSSProperties {
+  return {
+    width: "100%",
+    backgroundColor: "rgba(255,255,255,0.055)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    padding: "15px 18px",
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 500,
+    fontSize: 14,
+    color: "white",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+}
+
+function SectionHeader({ title, weight }: { title: string; weight: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        marginBottom: 24,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'Poppins', sans-serif",
+          fontWeight: 600,
+          fontSize: 11,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: "#C39529",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {title} <span style={{ color: "rgba(255,255,255,0.3)" }}>({weight})</span>
+      </span>
+      <span style={{ height: 1, flex: 1, backgroundColor: "rgba(255,255,255,0.1)" }} />
+    </div>
+  );
+}
+
+function ScoreGauge({
+  score,
+  hasPreview,
+  resultRevealed,
+}: {
+  score: number;
+  hasPreview: boolean;
+  resultRevealed: boolean;
+}) {
+  const tier = getCreditScoreTier(score);
+  const progress = Math.max(0, Math.min(1, (score - 500) / 400));
+  const circumference = 314;
+  const dash = hasPreview ? circumference * progress : 0;
+
+  return (
+    <div
+      style={{
+        border: "1px solid rgba(255,255,255,0.1)",
+        backgroundColor: "rgba(255,255,255,0.035)",
+        borderRadius: 16,
+        padding: "42px 38px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+      className="score-card"
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "radial-gradient(circle at 50% 10%, rgba(195,149,41,0.1), transparent 42%)",
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+          <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
+          <span
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 500,
+              fontSize: 10,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              color: "#C39529",
+            }}
+          >
+            Your Nord Credit Score
+          </span>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <svg width="280" height="180" viewBox="0 0 280 180" aria-hidden="true">
+            <path
+              d="M40 142a100 100 0 0 1 200 0"
+              fill="none"
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth="18"
+              strokeLinecap="round"
+              pathLength={circumference}
+            />
+            <path
+              d="M40 142a100 100 0 0 1 200 0"
+              fill="none"
+              stroke={tier.color}
+              strokeWidth="18"
+              strokeLinecap="round"
+              pathLength={circumference}
+              strokeDasharray={`${dash} ${circumference}`}
+              style={{ transition: "stroke-dasharray 0.6s ease, stroke 0.3s ease" }}
+            />
+            <text
+              x="140"
+              y="118"
+              textAnchor="middle"
+              fill="white"
+              fontFamily="'Poppins', sans-serif"
+              fontWeight="700"
+              fontSize={hasPreview ? "46" : "34"}
+            >
+              {hasPreview ? score : "--"}
+            </text>
+            <text
+              x="140"
+              y="145"
+              textAnchor="middle"
+              fill="rgba(255,255,255,0.35)"
+              fontFamily="'Poppins', sans-serif"
+              fontWeight="500"
+              fontSize="10"
+              letterSpacing="0.22em"
+            >
+              NORD SCORE
+            </text>
+          </svg>
+        </div>
+
+        <div
+          style={{
+            textAlign: "center",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            paddingTop: 24,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 600,
+              fontSize: 12,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: resultRevealed ? tier.color : "rgba(255,255,255,0.72)",
+              marginBottom: 8,
+            }}
+          >
+            {resultRevealed ? tier.name : hasPreview ? "Live score preview" : "Complete fields to score"}
+          </p>
+          <p
+            style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 400,
+              fontSize: 13,
+              lineHeight: 1.8,
+              color: "var(--text-muted)",
+              marginBottom: resultRevealed ? 20 : 0,
+            }}
+          >
+            {resultRevealed
+              ? `${tier.rate} - ${tier.note}`
+              : hasPreview
+                ? "Keep filling the form, then calculate to reveal your tier and offer."
+                : "Your indicative score and eligible tier will appear here."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultCard({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "gold" }) {
+  return (
+    <div
+      style={{
+        backgroundColor: tone === "gold" ? "rgba(195,149,41,0.09)" : "rgba(255,255,255,0.045)",
+        border: tone === "gold" ? "1px solid rgba(195,149,41,0.25)" : "1px solid rgba(255,255,255,0.1)",
+        borderRadius: 16,
+        padding: "28px 30px",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ResultEyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      style={{
+        fontSize: 10,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        color: "rgba(255,255,255,0.35)",
+        marginBottom: 20,
+        fontWeight: 500,
+      }}
+    >
+      // {children}
+    </p>
+  );
+}
+
+function ResultsPanel({
+  score,
+  tier,
+  breakdown,
+  signals,
+  firstName,
+  applicationUrl,
+  onEdit,
+  onContinue,
+}: {
+  score: number;
+  tier: CreditScoreTier;
+  breakdown: CreditScoreBreakdown[];
+  signals: CreditScoreSignal[];
+  firstName: string;
+  applicationUrl: string;
+  onEdit: () => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div
+        style={{
+          border: "1px solid rgba(255,255,255,0.14)",
+          backgroundColor: "rgba(255,255,255,0.06)",
+          borderRadius: 16,
+          padding: "22px 24px",
+        }}
+      >
+        <p
+          style={{
+            color: "#C39529",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            marginBottom: 12,
+          }}
+        >
+          Results Ready
+        </p>
+        <h2
+          style={{
+            fontFamily: "'Morpha', Georgia, serif", fontWeight: 400,
+            fontSize: "clamp(34px, 4vw, 56px)",
+            lineHeight: 1.05,
+            color: "white",
+          }}
+        >
+          Your indicative tier is
+          <br />
+          <em style={{ fontStyle: "normal", fontWeight: "bold" }}>{tier.name}.</em>
+        </h2>
+      </div>
+
+      <ResultCard>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 10,
+            marginBottom: 28,
+          }}
+        >
+          <span style={{ fontFamily: "'Morpha', Georgia, serif", fontSize: "clamp(48px, 5vw, 72px)", fontWeight: 400, color: tier.color, lineHeight: 1 }}>{score}</span>
+          <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase" }}>/ 1000</span>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {breakdown.map((item) => (
+            <div key={item.key}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                <span style={{ color: "rgba(255,255,255,0.52)", fontSize: 12, letterSpacing: "0.05em" }}>
+                  {item.name} ({Math.round(item.weight * 100)}%)
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 700 }}>
+                  +{item.points} pts
+                </span>
+              </div>
+              <div style={{ height: 3, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                <div
+                  style={{
+                    width: `${item.score}%`,
+                    height: "100%",
+                    backgroundColor: tier.color,
+                    transition: "width 0.5s ease",
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </ResultCard>
+
+      <ResultCard>
+        <ResultEyebrow>Indicative Financing Offer</ResultEyebrow>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            overflow: "hidden",
+          }}
+          className="score-offer-grid"
+        >
+          {[
+            { value: tier.rate, label: "Rate p.a." },
+            { value: tier.maxTenure, label: "Max Tenure" },
+            { value: tier.minDownPayment, label: "Min Down" },
+            { value: tier.name, label: "Your Tier" },
+          ].map((item, i) => (
+            <div
+              key={item.label}
+              style={{
+                padding: "22px 20px",
+                borderLeft: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)",
+                backgroundColor: "rgba(0,0,0,0.16)",
+              }}
+              className="score-offer-item"
+            >
+              <p style={{ fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.34)", marginBottom: 12 }}>
+                {item.label}
+              </p>
+              <p
+                style={{
+                  fontFamily: "'Poppins', sans-serif", fontWeight: 700,
+                  fontSize: item.label === "Your Tier" ? 30 : 36,
+                  lineHeight: 1.05,
+                  color: "white",
+                }}
+              >
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </ResultCard>
+
+      <ResultCard>
+        <ResultEyebrow>Key Signals</ResultEyebrow>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {signals.map((signal) => (
+            <div key={signal.text} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  marginTop: 7,
+                  flexShrink: 0,
+                  backgroundColor:
+                    signal.tone === "red"
+                      ? "#ef4444"
+                      : signal.tone === "yellow"
+                        ? "#C39529"
+                        : "#22c55e",
+                }}
+              />
+              <span style={{ color: "rgba(255,255,255,0.58)", fontSize: 13, lineHeight: 1.7 }}>
+                {signal.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      </ResultCard>
+
+      <ResultCard tone="gold">
+        <ResultEyebrow>Ready for Review</ResultEyebrow>
+        <h3
+          style={{
+            fontFamily: "'Morpha', Georgia, serif", fontWeight: 400,
+            color: "white",
+            fontSize: "clamp(28px, 3vw, 42px)",
+            lineHeight: 1.08,
+            margin: "0 0 16px",
+          }}
+        >
+          Lock in your assessment. <br />
+          <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Complete your application.</em>
+        </h3>
+        <p style={{ color: "rgba(255,255,255,0.62)", fontSize: 14, lineHeight: 1.9, marginBottom: 24 }}>
+          {firstName ? `${firstName}, your` : "Your"} indicative score is {score}. The full application verifies your identity, vehicle interest, and documents so Nord Finance can confirm final terms.
+        </p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={onEdit}
+            style={{
+              flex: "0 1 180px",
+              border: "1px solid rgba(255,255,255,0.14)",
+              background: "transparent",
+              color: "var(--text-muted)",
+              borderRadius: 100,
+              padding: "15px 20px",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Recalculate
+          </button>
+          <button
+            onClick={onContinue}
+            style={{
+              flex: "1 1 260px",
+              display: "block",
+              textAlign: "center",
+              border: "none",
+              backgroundColor: "#C39529",
+              color: "#000",
+              borderRadius: 100,
+              padding: "15px 20px",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Start My Loan Application →
+          </button>
+        </div>
+      </ResultCard>
+    </div>
+  );
+}
+
+const SESSION_KEY = "nord_credit_score_state";
+
+export function CreditScoreCalculatorPage() {
+  const [values, setValues] = useState<Record<string, number>>({});
+  const [identity, setIdentity] = useState({ firstName: "", lastName: "", email: "" });
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [obligations, setObligations] = useState(0);
+  const [downPayment, setDownPayment] = useState(30);
+  const [resultRevealed, setResultRevealed] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Restore state from sessionStorage when landing on ?result=1
+  useEffect(() => {
+    if (searchParams.get("result") !== "1") return;
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      if (!saved) return;
+      const s = JSON.parse(saved);
+      if (s.values)       setValues(s.values);
+      if (s.identity)     setIdentity(s.identity);
+      if (s.monthlyIncome !== undefined) setMonthlyIncome(s.monthlyIncome);
+      if (s.obligations   !== undefined) setObligations(s.obligations);
+      if (s.downPayment   !== undefined) setDownPayment(s.downPayment);
+      setResultRevealed(true);
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const sidebarRef = useRef<HTMLElement>(null);
+  const resultStackRef = useRef<HTMLDivElement>(null);
+  const formSectionRef = useRef<HTMLElement>(null);
+  const calculationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [touchedSliders, setTouchedSliders] = useState({
+    monthlyIncome: false,
+    obligations: false,
+  });
+
+  const completedSelects = creditScoreFieldKeys.filter((key) => values[key] !== undefined).length;
+  const identityComplete = Boolean(identity.firstName.trim() && identity.lastName.trim() && identity.email.trim());
+
+  const score = useMemo(
+    () => calculateCreditScore({ values, monthlyIncome, obligations, downPayment }),
+    [downPayment, monthlyIncome, obligations, values]
+  );
+
+  const completion = calculateCreditScoreCompletion({ completedSelects, identityComplete });
+  const canCalculate = DEBUG_BYPASS_SCORE_COMPLETION || completion >= 70;
+  const showResult = canCalculate && resultRevealed;
+  const tier = getCreditScoreTier(score);
+  const breakdown = useMemo(() => getCreditScoreBreakdown(values), [values]);
+  const signals = useMemo(
+    () => getCreditScoreSignals({ score, values, monthlyIncome, obligations, downPayment }),
+    [downPayment, monthlyIncome, obligations, score, values]
+  );
+  const applicationUrl = getApplicationUrl({
+    score,
+    tier: tier.name,
+    firstName: identity.firstName.trim(),
+    lastName: identity.lastName.trim(),
+    email: identity.email.trim(),
+    employmentType: values.employmentType !== undefined
+      ? creditScoreSelectOptions.employmentType.find((option) => option.value === values.employmentType)?.label
+      : undefined,
+    monthlyIncome,
+    downPayment,
+  });
+  const hasPreview =
+    completedSelects > 0 ||
+    touchedSliders.monthlyIncome ||
+    touchedSliders.obligations ||
+    Boolean(identity.firstName.trim() || identity.lastName.trim() || identity.email.trim());
+
+  const hideStaleResult = () => {
+    if (resultRevealed) setResultRevealed(false);
+    if (isCalculating) setIsCalculating(false);
+    if (calculationTimerRef.current) {
+      clearTimeout(calculationTimerRef.current);
+      calculationTimerRef.current = null;
+    }
+  };
+
+  const revealResult = () => {
+    if (!canCalculate || isCalculating) return;
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ values, identity, monthlyIncome, obligations, downPayment }));
+    } catch {}
+    setIsCalculating(true);
+    calculationTimerRef.current = setTimeout(() => {
+      setResultRevealed(true);
+      setIsCalculating(false);
+      calculationTimerRef.current = null;
+    }, 900);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (calculationTimerRef.current) clearTimeout(calculationTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showResult) return;
+
+    requestAnimationFrame(() => {
+      if (formSectionRef.current) {
+        const top = formSectionRef.current.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    });
+  }, [showResult]);
+
+  useEffect(() => {
+    if (!resultRevealed) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("result", "1");
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [resultRevealed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const editDetails = () => {
+    setResultRevealed(false);
+    requestAnimationFrame(() => {
+      if (formSectionRef.current) {
+        const top = formSectionRef.current.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    });
+  };
+
+  return (
+    <main style={{ paddingTop: 72, backgroundColor: "#000" }}>
+      {isCalculating && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 300,
+            backgroundColor: "rgba(0,0,0,0.76)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: "min(420px, 100%)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              backgroundColor: "rgba(10,10,10,0.92)",
+              borderRadius: 18,
+              padding: "34px 32px",
+              textAlign: "center",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.12)",
+                borderTopColor: "rgba(255,255,255,0.9)",
+                margin: "0 auto 22px",
+              }}
+              className="score-loader"
+            />
+            <p
+              style={{
+                color: "#C39529",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                marginBottom: 10,
+              }}
+            >
+              Calculating Score
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.8 }}>
+              Matching your financial profile to the right Nord financing tier.
+            </p>
+          </div>
+        </div>
+      )}
+      {isNavigating && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 300,
+            backgroundColor: "rgba(0,0,0,0.76)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: "min(420px, 100%)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              backgroundColor: "rgba(10,10,10,0.92)",
+              borderRadius: 18,
+              padding: "34px 32px",
+              textAlign: "center",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.12)",
+                borderTopColor: "rgba(255,255,255,0.9)",
+                margin: "0 auto 22px",
+              }}
+              className="score-loader"
+            />
+            <p
+              style={{
+                color: "#C39529",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                marginBottom: 10,
+              }}
+            >
+              Preparing Application
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.8 }}>
+              Taking you to the full application form.
+            </p>
+          </div>
+        </div>
+      )}
+      <section
+        style={{
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          background:
+            "radial-gradient(circle at 16% 18%, rgba(195,149,41,0.13), transparent 28%), linear-gradient(180deg, #111 0%, #050505 100%)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1440,
+            margin: "0 auto",
+            padding: "96px 80px 72px",
+            display: "grid",
+            gridTemplateColumns: "1fr 420px",
+            gap: 72,
+            alignItems: "end",
+          }}
+          className="score-hero"
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+              <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
+              <span style={{ fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529", fontWeight: 500 }}>
+                Nord Credit Score
+              </span>
+            </div>
+            <h1
+              style={{
+                fontFamily: "'Morpha', Georgia, serif",
+                fontWeight: 400,
+                fontSize: "clamp(44px, 5vw, 78px)",
+                lineHeight: 1.02,
+                letterSpacing: "-0.03em",
+                color: "white",
+                maxWidth: 720,
+              }}
+            >
+              Check your score. <br />
+              <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Know your tier.</em>
+            </h1>
+          </div>
+          <p
+            style={{
+              fontSize: 15,
+              lineHeight: 1.9,
+              color: "rgba(255,255,255,0.48)",
+              maxWidth: 410,
+              marginLeft: "auto",
+            }}
+          >
+            Start with your Nord Credit Score to see your likely tier, rate, tenure, and down-payment range. Once your result is ready, you can continue to the full application with your score carried forward.
+          </p>
+        </div>
+      </section>
+
+      <section ref={formSectionRef}>
+        <div
+          style={{
+            maxWidth: 1440,
+            margin: "0 auto",
+            padding: "72px 80px 120px",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) 440px",
+            gap: 64,
+            alignItems: "start",
+          }}
+          className="score-layout"
+        >
+          <div ref={resultStackRef} style={{ scrollMarginTop: 96 }}>
+            {showResult ? (
+              <ResultsPanel
+                score={score}
+                tier={tier}
+                breakdown={breakdown}
+                signals={signals}
+                firstName={identity.firstName.trim()}
+                applicationUrl={applicationUrl}
+                onEdit={editDetails}
+                onContinue={() => {
+                  setIsNavigating(true);
+                  setTimeout(() => router.push(applicationUrl), 1600);
+                }}
+              />
+            ) : (
+              <>
+            <SectionHeader title="Your Identity" weight="Required" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 18 }} className="score-field-grid">
+              <div>
+                <FieldLabel>First Name *</FieldLabel>
+                <input
+                  value={identity.firstName}
+                  onChange={(e) => {
+                    hideStaleResult();
+                    setIdentity({ ...identity, firstName: e.target.value });
+                  }}
+                  placeholder="First name"
+                  style={fieldStyle()}
+                />
+              </div>
+              <div>
+                <FieldLabel>Last Name *</FieldLabel>
+                <input
+                  value={identity.lastName}
+                  onChange={(e) => {
+                    hideStaleResult();
+                    setIdentity({ ...identity, lastName: e.target.value });
+                  }}
+                  placeholder="Last name"
+                  style={fieldStyle()}
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: 54 }}>
+              <FieldLabel>Email Address *</FieldLabel>
+              <input
+                value={identity.email}
+                onChange={(e) => {
+                  hideStaleResult();
+                  setIdentity({ ...identity, email: e.target.value });
+                }}
+                placeholder="your@email.com"
+                type="email"
+                style={fieldStyle()}
+              />
+            </div>
+
+            {creditScoreSections.map((section) => (
+              <div key={section.title} style={{ marginBottom: 54 }}>
+                <SectionHeader title={section.title} weight={section.weight} />
+
+                {section.title === "Income Stability" && (
+                  <div style={{ marginBottom: 24 }}>
+                    <FieldLabel>Monthly Net Income (₦)</FieldLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
+                        {touchedSliders.monthlyIncome ? `₦${monthlyIncome.toLocaleString("en-NG")}` : "--"}
+                      </span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦10M+</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10000000}
+                      step={250000}
+                      value={monthlyIncome}
+                      onChange={(e) => {
+                        hideStaleResult();
+                        setTouchedSliders({ ...touchedSliders, monthlyIncome: true });
+                        setMonthlyIncome(Number(e.target.value));
+                      }}
+                      className="score-range"
+                    />
+                  </div>
+                )}
+
+                {section.title === "Debt-to-Income Ratio" && (
+                  <div style={{ marginBottom: 24 }}>
+                    <FieldLabel>Existing Monthly Obligations (₦)</FieldLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
+                        {touchedSliders.obligations ? `₦${obligations.toLocaleString("en-NG")}` : "--"}
+                      </span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦5M+</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={5000000}
+                      step={100000}
+                      value={obligations}
+                      onChange={(e) => {
+                        hideStaleResult();
+                        setTouchedSliders({ ...touchedSliders, obligations: true });
+                        setObligations(Number(e.target.value));
+                      }}
+                      className="score-range"
+                    />
+                  </div>
+                )}
+
+                {section.title === "Down Payment Strength" && (
+                  <div style={{ marginBottom: 24 }}>
+                    <FieldLabel>Down Payment Percentage</FieldLabel>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>0%</span>
+                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>
+                        {downPayment}%
+                      </span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>70%+</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={70}
+                      step={5}
+                      value={downPayment}
+                      onChange={(e) => {
+                        hideStaleResult();
+                        setDownPayment(Number(e.target.value));
+                      }}
+                      className="score-range"
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }} className="score-field-grid">
+                  {section.fields.map((field) => (
+                    <div key={field.key}>
+                      <FieldLabel>{field.label}</FieldLabel>
+                      <select
+                        value={values[field.key] ?? ""}
+                        onChange={(e) => {
+                          hideStaleResult();
+                          setValues({
+                            ...values,
+                            [field.key]: Number(e.target.value),
+                          });
+                        }}
+                        style={{
+                          ...fieldStyle(),
+                          cursor: "pointer",
+                          appearance: "none",
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C39529' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "right 18px center",
+                        }}
+                      >
+                        <option value="">- Select -</option>
+                        {field.options.map((option) => (
+                          <option key={option.label} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={revealResult}
+              style={{
+                width: "100%",
+                border: "none",
+                backgroundColor: canCalculate ? "#C39529" : "rgba(195,149,41,0.42)",
+                color: "#000",
+                borderRadius: 100,
+                padding: "18px 28px",
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 700,
+                fontSize: 12,
+                letterSpacing: "0.22em",
+                textTransform: "uppercase",
+                cursor: canCalculate && !isCalculating ? "pointer" : "not-allowed",
+                marginTop: 10,
+                opacity: isCalculating ? 0.72 : 1,
+              }}
+            >
+              {isCalculating
+                ? "Calculating..."
+                : canCalculate
+                  ? "Calculate My Score"
+                  : `Complete Form (${completion}% / 70%)`}
+            </button>
+              </>
+            )}
+          </div>
+
+          <aside
+            ref={sidebarRef}
+            className="score-sidebar"
+            style={{
+              position: "sticky",
+              top: 104,
+              scrollMarginTop: 96,
+            }}
+          >
+            <ScoreGauge score={score} hasPreview={hasPreview} resultRevealed={showResult} />
+            <div
+              style={{
+                marginTop: 18,
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: "16px 18px",
+                color: "var(--text-muted)",
+                fontSize: 12,
+                lineHeight: 1.7,
+              }}
+            >
+              Completion: <span style={{ color: "#C39529", fontWeight: 700 }}>{completion}%</span>. This calculator is indicative only and does not guarantee approval.
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <style>{`
+        .score-range {
+          width: 100%;
+          accent-color: #C39529;
+          margin-top: 12px;
+        }
+        .score-range::-webkit-slider-runnable-track {
+          height: 3px;
+          background: rgba(255,255,255,0.16);
+          border-radius: 99px;
+        }
+        .score-range::-webkit-slider-thumb {
+          margin-top: -7px;
+        }
+        .score-loader {
+          animation: scoreSpin 0.9s linear infinite;
+        }
+        @keyframes scoreSpin {
+          to { transform: rotate(360deg); }
+        }
+        .score-layout input:-webkit-autofill,
+        .score-layout input:-webkit-autofill:hover,
+        .score-layout input:-webkit-autofill:focus,
+        .score-layout select:-webkit-autofill,
+        .score-layout select:-webkit-autofill:hover,
+        .score-layout select:-webkit-autofill:focus {
+          -webkit-text-fill-color: #fff !important;
+          caret-color: #fff !important;
+          box-shadow: 0 0 0 1000px #151515 inset !important;
+          -webkit-box-shadow: 0 0 0 1000px #151515 inset !important;
+          border-color: rgba(195,149,41,0.35) !important;
+          transition: background-color 9999s ease-out 0s;
+        }
+        @media (max-width: 1100px) {
+          .score-hero,
+          .score-layout {
+            grid-template-columns: 1fr !important;
+            padding-left: 40px !important;
+            padding-right: 40px !important;
+          }
+          .score-sidebar {
+            position: relative !important;
+            top: 0 !important;
+          }
+        }
+        @media (max-width: 700px) {
+          .score-hero,
+          .score-layout {
+            padding-left: 24px !important;
+            padding-right: 24px !important;
+          }
+          .score-field-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .score-flow-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .score-offer-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .score-next-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .score-offer-item {
+            border-left: none !important;
+            border-top: 1px solid rgba(255,255,255,0.08);
+          }
+          .score-offer-item:first-child {
+            border-top: none !important;
+          }
+          .score-card {
+            padding: 30px 22px !important;
+          }
+        }
+      `}</style>
+    </main>
+  );
+}

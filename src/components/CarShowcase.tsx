@@ -1,0 +1,277 @@
+'use client'
+
+import React, { useRef } from "react";
+import carA97 from "../imports/A9-7.jpg";
+import maxCity from "../imports/Max-city-high-rise-gen.jpg";
+import carChurch1 from "../imports/Nord-A7-church-1.jpg";
+import carA5 from "../imports/Nord-A5.jpg";
+
+const cars = [
+  { img: carA97.src, name: "A9 Series", category: "Executive Sedan", price: "From ₦42M", year: "2024" },
+  { img: maxCity.src, name: "Max City", category: "Urban Edition", price: "From ₦38M", year: "2024" },
+  { img: carChurch1.src, name: "A7 Heritage", category: "Grand Tourer", price: "From ₦35M", year: "2024" },
+  { img: carA5.src, name: "A5 Series", category: "Sport Coupé", price: "From ₦32.5M", year: "2024" },
+];
+
+export function CarShowcase() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: "left" | "right") => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: dir === "right" ? 356 : -356, behavior: "smooth" });
+  };
+
+  return (
+    <section
+      style={{
+        backgroundColor: "#000",
+        padding: "120px 0 100px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 1,
+          background:
+            "linear-gradient(90deg, transparent, rgba(195,149,41,0.3) 30%, rgba(195,149,41,0.3) 70%, transparent)",
+        }}
+      />
+
+      {/* Header */}
+      <div
+        style={{
+          maxWidth: 1440,
+          margin: "0 auto 52px",
+          padding: "0 80px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+        }}
+        className="showcase-header"
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <span style={{ color: "#C39529", fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 12 }}>//</span>
+            <span
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 500,
+                fontSize: 10,
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
+                color: "#C39529",
+              }}
+            >
+              Our Collection
+            </span>
+          </div>
+          <h2
+            style={{
+              fontFamily: "'Morpha', Georgia, serif",
+              fontWeight: 400,
+              fontSize: "clamp(36px, 3.6vw, 56px)",
+              lineHeight: 1.08,
+              color: "white",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Explore the{" "}
+            <em style={{ fontStyle: "normal", fontWeight: "bold" }}>collection.</em>
+          </h2>
+        </div>
+
+        {/* Arrows */}
+        <div style={{ display: "flex", gap: 10 }} className="showcase-arrows">
+          {(["left", "right"] as const).map((dir) => (
+            <button
+              key={dir}
+              onClick={() => scroll(dir)}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                border: "1px solid rgba(195,149,41,0.3)",
+                background: "none",
+                color: "rgba(255,255,255,0.55)",
+                fontSize: 18,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "#C39529";
+                (e.currentTarget as HTMLElement).style.color = "#C39529";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(195,149,41,0.3)";
+                (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.55)";
+              }}
+            >
+              {dir === "left" ? "←" : "→"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Scrollable track */}
+      <div
+        ref={scrollRef}
+        style={{
+          display: "flex",
+          gap: 16,
+          overflowX: "auto",
+          paddingLeft: 80,
+          paddingRight: 80,
+          paddingBottom: 8,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        className="showcase-track"
+      >
+        {cars.map((car, i) => (
+          <div
+            key={i}
+            style={{
+              minWidth: 320,
+              height: 440,
+              borderRadius: 14,
+              overflow: "hidden",
+              position: "relative",
+              flexShrink: 0,
+              cursor: "pointer",
+            }}
+            className="showcase-card"
+          >
+            <img
+              src={car.img}
+              alt={car.name}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                transition: "transform 0.65s ease",
+              }}
+              className="showcase-card-img"
+            />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.96) 100%)",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: "28px 24px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 400,
+                    fontSize: 9,
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                    color: "#C39529",
+                    marginBottom: 6,
+                  }}
+                >
+                  {car.year} · {car.category}
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Morpha', Georgia, serif",
+                    fontWeight: 400,
+                    fontSize: 22,
+                    color: "white",
+                    letterSpacing: "-0.01em",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {car.name}
+                </p>
+              </div>
+              <div
+                style={{
+                  backgroundColor: "rgba(195,149,41,0.12)",
+                  border: "1px solid rgba(195,149,41,0.3)",
+                  borderRadius: 4,
+                  padding: "6px 12px",
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500,
+                    fontSize: 10,
+                    color: "#C39529",
+                    letterSpacing: "0.05em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {car.price}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* View All */}
+      <div style={{ textAlign: "center", marginTop: 52 }}>
+        <a
+          href="/nord-automobiles"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontFamily: "'Poppins', sans-serif",
+            fontWeight: 500,
+            fontSize: 11,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.45)",
+            textDecoration: "none",
+            borderBottom: "1px solid rgba(195,149,41,0.25)",
+            paddingBottom: 4,
+            transition: "color 0.2s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#C39529")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
+        >
+          View All Vehicles →
+        </a>
+      </div>
+
+      <style>{`
+        .showcase-track::-webkit-scrollbar { display: none; }
+        .showcase-card:hover .showcase-card-img { transform: scale(1.05); }
+        @media (max-width: 768px) {
+          .showcase-header { padding: 0 28px !important; flex-direction: column !important; align-items: flex-start !important; gap: 24px; }
+          .showcase-track { padding-left: 28px !important; padding-right: 28px !important; }
+          .showcase-card { min-width: 280px !important; height: 360px !important; }
+          .showcase-arrows { display: none !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
