@@ -50,7 +50,6 @@ export function HowItWorks() {
 
         if (stepsRef.current) {
           const rect = stepsRef.current.getBoundingClientRect();
-          // 0 when section enters viewport bottom, 1 when top reaches 30% from top
           const p = Math.max(0, Math.min(1, (windowH - rect.top) / (windowH * 0.7)));
           setProgress(p);
         }

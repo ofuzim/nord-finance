@@ -1,20 +1,158 @@
 'use client'
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import carA97 from "../imports/A9-7.jpg";
 import maxCity from "../imports/Max-city-high-rise-gen.jpg";
 import carChurch1 from "../imports/Nord-A7-church-1.jpg";
 import carA5 from "../imports/Nord-A5.jpg";
 
 const cars = [
-  { img: carA97.src, name: "A9 Series", category: "Executive Sedan", price: "From ₦42M", year: "2024" },
-  { img: maxCity.src, name: "Max City", category: "Urban Edition", price: "From ₦38M", year: "2024" },
-  { img: carChurch1.src, name: "A7 Heritage", category: "Grand Tourer", price: "From ₦35M", year: "2024" },
-  { img: carA5.src, name: "A5 Series", category: "Sport Coupé", price: "From ₦32.5M", year: "2024" },
+  { img: carA97.src, name: "Nord A9", category: "Executive Sedan", price: "From ₦56M", year: "2026", url: "https://nordmotion.com/vehicle/nord-a9/" },
+  { img: maxCity.src, name: "Nord Max", category: "Urban Edition", price: "From ₦89M", year: "2026", url: "https://nordmotion.com/vehicle/max/" },
+  { img: carChurch1.src, name: "Nord A7", category: "Grand Tourer", price: "From ₦73M", year: "2026", url: "https://nordmotion.com/vehicle/nord-a7/" },
+  { img: carA5.src, name: "Nord C3", category: "Sport Coupé", price: "From ₦32.5M", year: "2026", url: "https://nordmotion.com/vehicle/nord-c3/" },
 ];
+
+function CarModal({ car, onClose }: { car: typeof cars[0]; onClose: () => void }) {
+  const [closing, setClosing] = useState(false);
+
+  const handleClose = () => {
+    setClosing(true);
+    setTimeout(onClose, 350);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <div
+      onClick={handleClose}
+      className={`car-modal-backdrop${closing ? " closing" : ""}`}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        backgroundColor: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "24px 20px",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={`car-modal-inner${closing ? " closing" : ""}`}
+        style={{
+          width: "100%",
+          maxWidth: 680,
+          borderRadius: 18,
+          overflow: "hidden",
+          position: "relative",
+          backgroundColor: "#0e0e10",
+          border: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        {/* Image */}
+        <div style={{ position: "relative", height: 420 }} className="car-modal-img-wrap">
+          <img
+            src={car.img}
+            alt={car.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(180deg, transparent 45%, rgba(0,0,0,0.92) 100%)",
+          }} />
+          {/* Name over image */}
+          <div className="car-modal-name-block" style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "28px 32px" }}>
+            <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C39529", marginBottom: 8 }}>
+              {car.year} · {car.category}
+            </p>
+            <p style={{ fontFamily: "'Morpha', Georgia, serif", fontWeight: 400, fontSize: 34, color: "white", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              {car.name}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 32px", borderTop: "1px solid rgba(255,255,255,0.07)" }} className="car-modal-footer">
+          <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 16, color: "#C39529" }}>{car.price}</span>
+          <a
+            href={car.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={handleClose}
+            style={{
+              fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: 10,
+              letterSpacing: "0.16em", textTransform: "uppercase",
+              color: "#000", backgroundColor: "#C39529",
+              borderRadius: 100, padding: "11px 20px",
+              textDecoration: "none", whiteSpace: "nowrap",
+            }}
+          >
+            View on Nord →
+          </a>
+        </div>
+
+        {/* Close button */}
+        <button
+          onClick={handleClose}
+          style={{
+            position: "absolute", top: 16, right: 16,
+            background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
+            color: "rgba(255,255,255,0.7)", fontSize: 15,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >✕</button>
+      </div>
+
+      <style>{`
+        @keyframes car-backdrop-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes car-backdrop-out {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+        @keyframes car-modal-in {
+          from { opacity: 0; transform: scale(0.92) translateY(22px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes car-modal-out {
+          from { opacity: 1; transform: scale(1) translateY(0); }
+          to   { opacity: 0; transform: scale(0.92) translateY(22px); }
+        }
+        @keyframes car-name-in {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .car-modal-backdrop         { animation: car-backdrop-in 0.22s ease both; }
+        .car-modal-backdrop.closing { animation: car-backdrop-out 0.3s ease both; }
+        .car-modal-inner            { animation: car-modal-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .car-modal-inner.closing    { animation: car-modal-out 0.3s cubic-bezier(0.4, 0, 1, 1) both; }
+        .car-modal-name-block { animation: car-name-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both; }
+        .car-modal-footer     { animation: car-name-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both; }
+        @media (max-width: 600px) {
+          .car-modal-img-wrap { height: 280px !important; }
+          .car-modal-name-block { padding: 20px 22px !important; }
+          .car-modal-name-block p:last-child { font-size: 26px !important; }
+          .car-modal-footer { padding: 16px 22px !important; }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 export function CarShowcase() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedCar, setSelectedCar] = useState<typeof cars[0] | null>(null);
 
   const scroll = (dir: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -23,6 +161,7 @@ export function CarShowcase() {
 
   return (
     <section
+      id="collection"
       className="showcase-section"
       style={{
         backgroundColor: "#000",
@@ -144,6 +283,7 @@ export function CarShowcase() {
         {cars.map((car, i) => (
           <div
             key={i}
+            onClick={() => setSelectedCar(car)}
             style={{
               minWidth: 320,
               height: 440,
@@ -244,7 +384,9 @@ export function CarShowcase() {
       {/* View All */}
       <div className="showcase-view-all" style={{ textAlign: "center", marginTop: 52 }}>
         <a
-          href="/nord-automobiles"
+          href="https://nordmotion.com/vehicles/"
+          target="_blank"
+          rel="noreferrer"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -266,6 +408,8 @@ export function CarShowcase() {
           View All Vehicles →
         </a>
       </div>
+
+      {selectedCar && <CarModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
 
       <style>{`
         .showcase-track::-webkit-scrollbar { display: none; }

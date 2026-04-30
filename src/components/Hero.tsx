@@ -229,10 +229,8 @@ export function Hero() {
           >
             Learn More
           </a>
-          <a
-            href="https://nordmotion.com/"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            onClick={() => document.getElementById("collection")?.scrollIntoView({ behavior: "smooth" })}
             className="hero-view-vehicles"
             style={{
               display: "flex",
@@ -242,17 +240,22 @@ export function Hero() {
               fontWeight: 400,
               fontSize: 13,
               color: "var(--text-muted)",
-              textDecoration: "none",
+              background: "none",
+              border: "none",
               borderBottom: "1px solid rgba(195,149,41,0.25)",
               paddingBottom: 4,
+              paddingLeft: 0,
+              paddingRight: 0,
+              paddingTop: 0,
               transition: "color 0.2s ease",
               whiteSpace: "nowrap",
+              cursor: "pointer",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.8)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
           >
             View Vehicles <span style={{ fontSize: 11 }}>›</span>
-          </a>
+          </button>
         </div>
 
         {/* ── Row 2 / Col 2 — stats (same row as CTAs) ── */}
@@ -312,7 +315,7 @@ export function Hero() {
 
 
       {/* ── Label above marquee ── */}
-      <div style={{ position: "absolute", bottom: 52, left: 0, right: 0, zIndex: 10, textAlign: "center" }}>
+      <div className="hero-models-label" style={{ position: "absolute", bottom: 52, left: 0, right: 0, zIndex: 10, textAlign: "center" }}>
         <span style={{
           fontFamily: "'Poppins', sans-serif", fontWeight: 400, fontSize: 10,
           letterSpacing: "0.08em", color: "rgba(255, 255, 255, 0.45)",
@@ -385,7 +388,7 @@ export function Hero() {
             grid-template-rows: auto !important;
             align-content: start !important;
             align-items: start !important;
-            padding-top: 88px !important;
+            padding-top: 120px !important;
             padding-left: 28px !important;
             padding-right: 28px !important;
             padding-bottom: 40px !important;
@@ -401,7 +404,9 @@ export function Hero() {
           .hero-headline { margin-bottom: 12px !important; }
           .hero-view-vehicles { margin-top: 12px !important; }
           .hero-stats { display: none !important; }
+          .hero-models-label { display: none !important; }
           .hero-headline { font-size: clamp(44px, 8vw, 68px) !important; }
+          .marquee-track span { font-size: 9px !important; letter-spacing: 0.18em !important; padding: 0 8px !important; }
         }
       `}</style>
     </section>

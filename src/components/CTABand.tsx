@@ -196,9 +196,10 @@ export function CTABand() {
               fontSize: 11,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.52)",
+              color: "rgba(255,255,255,0.88)",
               textDecoration: "none",
-              border: "1px solid rgba(255,255,255,0.14)",
+              border: "1px solid rgba(195,149,41,0.46)",
+              backgroundColor: "rgba(195,149,41,0.1)",
               borderRadius: 100,
               padding: "15px 28px",
               display: "inline-flex",
@@ -207,12 +208,14 @@ export function CTABand() {
               transition: "all 0.2s ease",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(195,149,41,0.4)";
+              (e.currentTarget as HTMLElement).style.borderColor = "#C39529";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(195,149,41,0.18)";
               (e.currentTarget as HTMLElement).style.color = "#C39529";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.14)";
-              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.52)";
+              (e.currentTarget as HTMLElement).style.borderColor = "rgba(195,149,41,0.46)";
+              (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(195,149,41,0.1)";
+              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.88)";
             }}
           >
             <svg
@@ -246,7 +249,7 @@ export function CTABand() {
           .cta-eyebrow span:nth-child(2) { font-size: 9px !important; letter-spacing: 0.2em !important; }
           .cta-title-wrap { margin-bottom: 16px !important; }
           .cta-title { font-size: 38px !important; line-height: 1.06 !important; margin: 0 !important; }
-          .cta-description { font-size: 13px !important; line-height: 1.75 !important; margin-bottom: 28px !important; }
+          .cta-description { font-size: 15px !important; line-height: 1.8 !important; margin-bottom: 32px !important; }
           .cta-rule { display: none !important; }
         }
       `}</style>

@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
-
 @font-face {
   font-family: 'Morpha';
   src: url('/fonts/morpha_thin.otf') format('opentype');
   font-weight: 100;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -12,6 +11,7 @@
   src: url('/fonts/morpha.otf') format('opentype');
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -19,6 +19,7 @@
   src: url('/fonts/morpha_bold.otf') format('opentype');
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -26,6 +27,7 @@
   src: url('/fonts/morpha_black.otf') format('opentype');
   font-weight: 900;
   font-style: normal;
+  font-display: swap;
 }
 
 @import 'tailwindcss' source(none);
@@ -156,9 +158,31 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ─────────────────────────────────────────────────────────────
+   MOBILE BODY TEXT — single place to tune size & colour.
+   --text-muted controls the grey tone app-wide (set in :root).
+   The selectors below catch every muted paragraph regardless of
+   which exact rgba value the component uses inline.
+───────────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
   .sec-label { margin-bottom: 12px !important; }
   .sec-h2 { margin-bottom: 16px !important; }
+
+  p[style*="var(--text-muted)"],
+  p[style*="rgba(255,255,255,0.3"],
+  p[style*="rgba(255,255,255,0.4"],
+  p[style*="rgba(255,255,255,0.5"],
+  p[style*="rgba(255,255,255,0.6"],
+  p[style*="rgba(255,255,255,0.7"],
+  span[style*="var(--text-muted)"],
+  span[style*="rgba(255,255,255,0.4"],
+  span[style*="rgba(255,255,255,0.5"],
+  span[style*="rgba(255,255,255,0.6"],
+  span[style*="rgba(255,255,255,0.7"] {
+    font-size: 14px !important;
+    line-height: 1.8 !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+  }
 }
 
 @layer base {
@@ -168,6 +192,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
   }
 
   html {

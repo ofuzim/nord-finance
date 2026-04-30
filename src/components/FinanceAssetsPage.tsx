@@ -190,6 +190,7 @@ export function FinanceAssetsPage() {
             </h1>
           </div>
           <p
+            className="finance-assets-hero-copy"
             style={{
               color: "rgba(255,255,255,0.5)",
               fontSize: 15,
@@ -330,6 +331,12 @@ export function FinanceAssetsPage() {
             .resource-category-grid,
             .finance-assets-faq-grid {
               grid-template-columns: 1fr !important;
+            }
+            .finance-assets-hero-copy {
+              font-size: 15px !important;
+              line-height: 1.85 !important;
+              margin: 0 !important;
+              max-width: 100% !important;
             }
           }
         `}</style>

@@ -41,10 +41,10 @@ const contactItems = [
   { label: "hello@nordfinance.ng", href: "mailto:hello@nordfinance.ng" },
   { label: "0814 979 9150", href: "https://wa.me/2348149799150", external: true },
   {
-    label: "4 Adebisi Ogunniyi Cres, Lekki Phase I, Lekki 106104, Lagos",
+    label: "Plot 14, Adebisi Ogunniyi Crescent, Lekki-Epe Expressway, Lekki, Lagos.",
     href:
       "https://www.google.com/maps/search/?api=1&query=" +
-      encodeURIComponent("4 Adebisi Ogunniyi Cres, Lekki Phase I, Lekki 106104, Lagos"),
+      encodeURIComponent("Plot 14, Adebisi Ogunniyi Crescent, Lekki-Epe Expressway, Lekki, Lagos"),
     external: true,
   },
 ];
@@ -85,6 +85,7 @@ export function Footer() {
               <NordFinanceLogo height={52} />
             </div>
             <p
+              className="footer-brand-desc"
               style={{
                 fontFamily: "'Poppins', sans-serif",
                 fontWeight: 300,
@@ -296,7 +297,10 @@ export function Footer() {
         @media (max-width: 600px) {
           .footer-container { padding: 0 24px !important; }
           .footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .footer-brand-desc { max-width: 100% !important; font-size: 14px !important; line-height: 1.8 !important; color: rgba(255,255,255,0.72) !important; }
+          .footer-grid a { font-size: 14px !important; color: rgba(255,255,255,0.72) !important; }
           .footer-bottom { flex-direction: column !important; gap: 8px; text-align: center; }
+          .footer-bottom p { font-size: 12px !important; color: rgba(255,255,255,0.4) !important; }
         }
       `}</style>
     </footer>

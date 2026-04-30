@@ -12,7 +12,6 @@ export function Navigation() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const pendingHomeTopRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const applyDisabled = pathname.startsWith("/application") || pathname.startsWith("/credit-score");
 
@@ -49,11 +48,7 @@ export function Navigation() {
       setActiveSection("");
       return;
     }
-    if (pendingHomeTopRef.current) {
-      pendingHomeTopRef.current = false;
-      window.history.replaceState(null, "", "/");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (window.location.hash === "#plans") {
+    if (window.location.hash === "#plans") {
       window.setTimeout(() => scrollToSection("plans"), 80);
     }
     const updateActiveSection = () => {
@@ -92,18 +87,27 @@ export function Navigation() {
     return pathname.startsWith(link.href);
   };
 
-  const handleNavClick = (event: React.MouseEvent<HTMLAnchorElement>, link: (typeof navLinks)[number]) => {
+  // Close menu when pathname changes — covers all cross-page navigation
+  useEffect(() => {
     closeMenu();
+  }, [pathname]);
+
+  const handleNavClick = (event: React.MouseEvent<HTMLAnchorElement>, link: (typeof navLinks)[number]) => {
+    // External links open in new tab — pathname never changes, so close immediately
+    if (link.external) {
+      closeMenu();
+      return;
+    }
 
     if ("home" in link && link.home) {
-      event.preventDefault();
-      if (pathname !== "/") {
-        pendingHomeTopRef.current = true;
-        router.push("/", { scroll: false });
-      } else {
+      if (pathname === "/") {
+        // Already home — close and scroll to top immediately
+        closeMenu();
+        event.preventDefault();
         window.history.replaceState(null, "", "/");
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
+      // Navigating to / from another page — overlay stays open until pathname changes
       return;
     }
 
@@ -112,10 +116,13 @@ export function Navigation() {
     event.preventDefault();
 
     if (pathname === "/") {
+      // Same-page section scroll — close immediately
+      closeMenu();
       scrollToSection(link.section);
       return;
     }
 
+    // Cross-page section link — overlay stays open until pathname changes
     router.push(link.href, { scroll: false });
     window.setTimeout(() => scrollToSection(link.section), 120);
   };

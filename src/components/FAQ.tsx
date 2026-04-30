@@ -48,8 +48,8 @@ function AccordionItem({
           background: "none", border: "none", cursor: "pointer", gap: 20, textAlign: "left",
         }}
       >
-        <span style={{
-          fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 13,
+        <span className="faq-question" style={{
+          fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 15,
           color: isOpen ? "#C39529" : "white",
           lineHeight: 1.5, transition: "color 0.2s ease",
         }}>
@@ -172,6 +172,7 @@ export function FAQ() {
           .faq-eyebrow span:last-child { font-size: 9px !important; letter-spacing: 0.2em !important; }
           .faq-title { font-size: 30px !important; line-height: 1.08 !important; margin: 0 !important; }
           .faq-sub { font-size: 13px !important; line-height: 1.75 !important; margin: 0 !important; }
+          .faq-question { font-size: 15px !important; line-height: 1.45 !important; }
           .faq-grid { margin-bottom: 44px !important; }
         }
         @media (max-width: 768px) {

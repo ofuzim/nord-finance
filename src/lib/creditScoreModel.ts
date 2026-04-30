@@ -270,15 +270,15 @@ export const creditScoreFieldKeys = creditScoreSections.flatMap((section) =>
 
 export function getCreditScoreTier(score: number): CreditScoreTier {
   if (score >= 850) {
-    return { name: "Private Bridge", color: "#EDD98A", rate: "from 9% p.a.", maxTenure: "6 months", minDownPayment: "50%", note: "You're in our highest tier — reserved for top-performing financial profiles" };
+    return { name: "Private Bridge", color: "#9ca3af", rate: "from 9% p.a.", maxTenure: "6 months", minDownPayment: "50%", note: "You're in our highest tier — reserved for top-performing financial profiles" };
   }
   if (score >= 800) {
-    return { name: "Premium Tier", color: "#D4A535", rate: "18% p.a. avg.", maxTenure: "18 months", minDownPayment: "30%", note: "You have a strong financial profile with a low risk of default" };
+    return { name: "Premium Tier", color: "#ef4444", rate: "18% p.a.", maxTenure: "12 months", minDownPayment: "40%", note: "You have a strong financial profile with a low risk of default" };
   }
   if (score >= 700) {
-    return { name: "Core Tier", color: "#C39529", rate: "22% p.a.", maxTenure: "36 months", minDownPayment: "30%", note: "You have a solid credit profile and good repayment history" };
+    return { name: "Core Tier", color: "#EAB308", rate: "22% p.a.", maxTenure: "12–24 months", minDownPayment: "30%", note: "You have a solid credit profile and good repayment history" };
   }
-  return { name: "Access Tier", color: "#8B6914", rate: "28%+ p.a.", maxTenure: "48 months", minDownPayment: "30%", note: "You meet our financing criteria and qualify for vehicle credit" };
+  return { name: "Access Tier", color: "#22c55e", rate: "28%+ p.a.", maxTenure: "12–48 months", minDownPayment: "30%", note: "You meet our financing criteria and qualify for vehicle credit" };
 }
 
 export function calculateCreditScore({

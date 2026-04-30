@@ -1086,8 +1086,8 @@ export function CreditScoreCalculatorPage() {
             margin: 0 !important;
           }
           .score-hero-copy {
-            font-size: 13px !important;
-            line-height: 1.75 !important;
+            font-size: 15px !important;
+            line-height: 1.85 !important;
             margin: 0 !important;
             max-width: 100% !important;
           }

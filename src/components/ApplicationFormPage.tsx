@@ -588,7 +588,7 @@ export function ApplicationFormPage() {
                   Know Your Customer <br />
                   <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Application Form</em>
                 </h1>
-                <p style={{ color: "rgba(255,255,255,0.48)", fontSize: 14, lineHeight: 1.9, maxWidth: 620, marginTop: 22 }}>
+                <p className="application-hero-copy" style={{ color: "rgba(255,255,255,0.48)", fontSize: 15, lineHeight: 1.9, maxWidth: 620, marginTop: 22 }}>
                   Complete all four sections to submit your application. Your information is securely processed by Nord Finance and used for credit assessment.
                 </p>
               </div>
@@ -1044,6 +1044,10 @@ export function ApplicationFormPage() {
           }
           .application-hero-eyebrow-end {
             display: inline !important;
+          }
+          .application-hero-copy {
+            font-size: 15px !important;
+            line-height: 1.85 !important;
           }
           .application-grid {
             grid-template-columns: 1fr !important;
