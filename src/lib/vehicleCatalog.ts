@@ -43,7 +43,7 @@ export const MODEL_INDICATIVE_PRICES: Record<string, number> = {
   "Nord C9": 36_000_000,
   "Nord A9": 42_000_000,
   "Nord Demir": 40_000_000,
-  "Nord Max": 38_000_000,
+  "Nord Max": 38_900_000,
   "Nord Tusk": 37_000_000,
   "Nord Flit": 45_000_000,
   "Nord Tripper": 48_000_000,

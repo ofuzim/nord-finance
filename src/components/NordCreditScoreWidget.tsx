@@ -213,7 +213,15 @@ export function NordCreditScoreWidget({
       </div>
 
       {/* Pill lives in the outer (clipping) div so it's always visible */}
-      <Link href="/credit-score" className="widget-pill" style={{
+      <Link
+        href="/credit-score"
+        prefetch={false}
+        className="widget-pill"
+        onClick={(event) => {
+          event.preventDefault();
+          window.location.assign("/credit-score");
+        }}
+        style={{
         position: "absolute",
         bottom: size * 0.04,
         left: "50%",
@@ -248,7 +256,7 @@ export function NordCreditScoreWidget({
           letterSpacing: "0.12em",
           textTransform: "uppercase",
           color: "#C39529",
-        }}>
+      }}>
           Calculate Your Score
         </span>
         <span style={{ color: "#C39529", fontSize: size * 0.020 }}>›</span>

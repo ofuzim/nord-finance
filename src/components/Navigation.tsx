@@ -1,17 +1,18 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowUp, X } from "lucide-react";
+import { ArrowUp, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { NordFinanceLogo } from "./NordFinanceLogo";
 
 export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [isDocumentNavigating, setIsDocumentNavigating] = useState(false);
+  const [mobileVehiclesOpen, setMobileVehiclesOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const lastScrollYRef = useRef(0);
   const applyDisabled = pathname.startsWith("/application") || pathname.startsWith("/credit-score");
 
@@ -76,23 +77,44 @@ export function Navigation() {
     { label: "Products", href: "/#plans", section: "plans" },
     { label: "Credit Score", href: "/credit-score" },
     { label: "Finance Assets", href: "/finance-assets" },
-    { label: "Nord Automobiles", href: "https://nordmotion.com/", external: true },
+    { label: "Vehicles", dropdown: "vehicles" },
     { label: "Contact Us", href: "https://wa.me/2348149799150", external: true },
   ];
 
+  const vehicleLinks = [
+    { label: "Nord Motion", href: "https://nordmotion.com/" },
+    { label: "Tavet Motion", href: "https://www.tavetmotion.com/" },
+  ];
+
   const navLinkIsActive = (link: (typeof navLinks)[number]) => {
+    if ("dropdown" in link) return false;
     if ("home" in link && link.home) return pathname === "/" && activeSection !== "plans";
     if (link.section) return pathname === "/" && activeSection === link.section;
     if (link.href === "/" || link.external) return false;
     return pathname.startsWith(link.href);
   };
 
-  // Close menu when pathname changes — covers all cross-page navigation
+  const navigateDocument = (href: string) => {
+    setIsDocumentNavigating(true);
+    window.location.assign(href);
+  };
+
+  // Close menu when pathname changes — covers all cross-page navigation.
   useEffect(() => {
     closeMenu();
+    setMobileVehiclesOpen(false);
+    setIsDocumentNavigating(false);
   }, [pathname]);
 
-  const handleNavClick = (event: React.MouseEvent<HTMLAnchorElement>, link: (typeof navLinks)[number]) => {
+  const handleNavClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    link: (typeof navLinks)[number],
+  ) => {
+    if ("dropdown" in link) {
+      event.preventDefault();
+      return;
+    }
+
     // External links open in new tab — pathname never changes, so close immediately
     if (link.external) {
       closeMenu();
@@ -106,25 +128,29 @@ export function Navigation() {
         event.preventDefault();
         window.history.replaceState(null, "", "/");
         window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
       }
-      // Navigating to / from another page — overlay stays open until pathname changes
+      event.preventDefault();
+      navigateDocument("/");
       return;
     }
 
-    if (!link.section) return;
-
-    event.preventDefault();
+    if (!link.section) {
+      event.preventDefault();
+      navigateDocument(link.href);
+      return;
+    }
 
     if (pathname === "/") {
       // Same-page section scroll — close immediately
+      event.preventDefault();
       closeMenu();
       scrollToSection(link.section);
       return;
     }
 
-    // Cross-page section link — overlay stays open until pathname changes
-    router.push(link.href, { scroll: false });
-    window.setTimeout(() => scrollToSection(link.section), 120);
+    event.preventDefault();
+    navigateDocument(link.href);
   };
 
   const handleBackToTop = () => {
@@ -136,6 +162,19 @@ export function Navigation() {
     <>
       {/* Hidden checkbox — CSS-only mobile menu toggle, survives HMR */}
       <input type="checkbox" id="nav-toggle" aria-hidden="true" />
+
+      {isDocumentNavigating && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 500,
+            backgroundColor: "#000",
+            pointerEvents: "all",
+          }}
+        />
+      )}
 
       <nav
         className="site-nav"
@@ -167,6 +206,7 @@ export function Navigation() {
           {/* Logo */}
           <Link
             href="/"
+            prefetch={false}
             onClick={(e) => handleNavClick(e as React.MouseEvent<HTMLAnchorElement>, navLinks[0])}
             style={{ textDecoration: "none", display: "flex", alignItems: "center", flexShrink: 0 }}
           >
@@ -177,10 +217,54 @@ export function Navigation() {
           <div className="nav-links" style={{ display: "flex", gap: 40, alignItems: "center" }}>
             {navLinks.map((link) => {
               const isActive = navLinkIsActive(link);
+              if ("dropdown" in link) {
+                return (
+                  <div key={link.label} className="nav-dropdown">
+                    <button
+                      type="button"
+                      className="nav-dropdown-trigger"
+                      style={{
+                        fontFamily: "'Poppins', sans-serif",
+                        fontWeight: 500,
+                        fontSize: 11,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "rgba(255,255,255,0.8)",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        cursor: "pointer",
+                        transition: "color 0.2s ease",
+                      }}
+                    >
+                      {link.label}
+                      <ChevronDown size={13} strokeWidth={2} />
+                    </button>
+                    <div className="nav-dropdown-menu">
+                      {vehicleLinks.map((vehicle) => (
+                        <a
+                          key={vehicle.href}
+                          href={vehicle.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={closeMenu}
+                          className="nav-dropdown-item"
+                        >
+                          {vehicle.label}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={link.external ? undefined : false}
                   target={link.external ? "_blank" : undefined}
                   rel={link.external ? "noreferrer" : undefined}
                   onClick={(e) => handleNavClick(e, link)}
@@ -207,7 +291,12 @@ export function Navigation() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link
               href="/credit-score"
+              prefetch={false}
               className="nav-apply"
+              onClick={(event) => {
+                event.preventDefault();
+                if (!applyDisabled) navigateDocument("/credit-score");
+              }}
               style={{
                 fontFamily: "'Poppins', sans-serif",
                 fontWeight: 600,
@@ -296,10 +385,78 @@ export function Navigation() {
         {navLinks.map((link) => {
           const isActive = navLinkIsActive(link);
           const words = link.label.split(" ");
+          if ("dropdown" in link) {
+            return (
+              <div
+                key={link.label}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: mobileVehiclesOpen ? 14 : 0,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setMobileVehiclesOpen((open) => !open)}
+                  style={{
+                    fontFamily: "'Morpha', Georgia, serif",
+                    fontSize: 32,
+                    letterSpacing: "0.03em",
+                    textTransform: "uppercase",
+                    color: mobileVehiclesOpen ? "#C39529" : "white",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  <span style={{ fontWeight: 400 }}>{link.label}</span>
+                  <ChevronDown
+                    size={24}
+                    strokeWidth={1.5}
+                    style={{
+                      transform: mobileVehiclesOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
+                </button>
+                {mobileVehiclesOpen && (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                    {vehicleLinks.map((vehicle) => (
+                      <a
+                        key={vehicle.href}
+                        href={vehicle.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={closeMenu}
+                        style={{
+                          fontFamily: "'Poppins', sans-serif",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,0.64)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        {vehicle.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
           return (
             <Link
               key={link.href}
               href={link.href}
+              prefetch={link.external ? undefined : false}
               target={link.external ? "_blank" : undefined}
               rel={link.external ? "noreferrer" : undefined}
               onClick={(e) => handleNavClick(e, link)}
@@ -332,7 +489,11 @@ export function Navigation() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center", marginTop: 8 }}>
           <Link
             href="/credit-score"
-            onClick={closeMenu}
+            prefetch={false}
+            onClick={(event) => {
+              event.preventDefault();
+              if (!applyDisabled) navigateDocument("/credit-score");
+            }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 600,
@@ -453,6 +614,61 @@ export function Navigation() {
         #nav-toggle { display: none; }
         .mobile-overlay { display: none; }
         .nav-hamburger { display: none; }
+        .nav-dropdown {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          padding: 22px 0;
+        }
+        .nav-dropdown-trigger:hover,
+        .nav-dropdown:focus-within .nav-dropdown-trigger,
+        .nav-dropdown:hover .nav-dropdown-trigger {
+          color: #C39529 !important;
+        }
+        .nav-dropdown-menu {
+          position: absolute;
+          top: calc(100% - 10px);
+          left: 50%;
+          min-width: 172px;
+          padding: 10px;
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 8px;
+          background: rgba(0,0,0,0.92);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.38);
+          opacity: 0;
+          pointer-events: none;
+          transform: translate(-50%, 8px);
+          transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .nav-dropdown:hover .nav-dropdown-menu,
+        .nav-dropdown:focus-within .nav-dropdown-menu {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translate(-50%, 0);
+        }
+        .nav-dropdown-item {
+          display: block;
+          padding: 10px 12px;
+          border-radius: 6px;
+          text-align: center;
+          font-family: 'Poppins', sans-serif;
+          font-weight: 600;
+          font-size: 10px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.72);
+          text-decoration: none;
+          white-space: nowrap;
+          transition: color 0.18s ease, background-color 0.18s ease;
+        }
+        .nav-dropdown-item:hover,
+        .nav-dropdown-item:focus {
+          color: #C39529;
+          background: rgba(255,255,255,0.06);
+          outline: none;
+        }
 
         @media (max-width: 768px) {
           .site-nav {
@@ -463,6 +679,7 @@ export function Navigation() {
           }
           .nav-inner { padding: 0 24px !important; }
           .nav-links { display: none !important; }
+          .nav-dropdown { display: none !important; }
           .nav-apply { display: none !important; }
           .nav-hamburger { display: flex !important; align-items: center; justify-content: center; }
           #nav-toggle:checked ~ .mobile-overlay { display: flex !important; }

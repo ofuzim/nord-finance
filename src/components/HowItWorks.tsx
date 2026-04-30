@@ -348,7 +348,7 @@ export function HowItWorks() {
           .how-track {
             top: 0 !important;
             bottom: 0 !important;
-            left: 27px !important;
+            left: 21px !important;
             right: auto !important;
             width: 1px !important;
             height: auto !important;
@@ -363,14 +363,14 @@ export function HowItWorks() {
             flex-direction: row !important;
             align-items: flex-start !important;
             text-align: left !important;
-            gap: 20px !important;
+            gap: 16px !important;
           }
-          .how-step-circle { width: 56px !important; height: 56px !important; margin-bottom: 0 !important; }
-          .how-step-circle span { font-size: 13px !important; }
+          .how-step-circle { width: 44px !important; height: 44px !important; margin-bottom: 0 !important; }
+          .how-step-circle span { font-size: 11px !important; }
           .how-step:last-child .how-step-circle::after {
             content: "" !important;
             position: absolute !important;
-            top: calc(50% + 1px) !important;
+            top: calc(100% + 1px) !important;
             left: 50% !important;
             width: 4px !important;
             height: 120vh !important;

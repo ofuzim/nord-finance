@@ -726,7 +726,7 @@ export function CreditScoreCalculatorPage() {
                 onEdit={editDetails}
                 onContinue={() => {
                   setIsNavigating(true);
-                  setTimeout(() => router.push(applicationUrl), 1600);
+                  setTimeout(() => window.location.assign(applicationUrl), 1600);
                 }}
               />
             ) : (

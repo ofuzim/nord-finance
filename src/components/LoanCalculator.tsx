@@ -515,6 +515,11 @@ export function LoanCalculator() {
           <div style={{ textAlign: "center" }}>
             <Link
               href="/credit-score"
+              prefetch={false}
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign("/credit-score");
+              }}
               style={{
                 display: "inline-block",
                 fontFamily: "'Poppins', sans-serif",

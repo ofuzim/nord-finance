@@ -1,6 +1,7 @@
 import { Navigation } from '@/components/Navigation'
 import { Footer } from '@/components/Footer'
 import { FinanceAssetsPage as FinanceAssetsPageContent } from '@/components/FinanceAssetsPage'
+import { FAQ } from '@/components/FAQ'
 
 export const metadata = {
   title: 'Finance Assets — Nord Finance',
@@ -19,6 +20,7 @@ export default function FinanceAssetsPage() {
     >
       <Navigation />
       <FinanceAssetsPageContent />
+      <FAQ />
       <Footer />
     </div>
   )

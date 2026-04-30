@@ -175,6 +175,11 @@ export function Hero() {
         >
           <Link
             href="/credit-score"
+            prefetch={false}
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.assign("/credit-score");
+            }}
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 600,

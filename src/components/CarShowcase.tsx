@@ -4,13 +4,13 @@ import React, { useEffect, useRef, useState } from "react";
 import carA97 from "../imports/A9-7.jpg";
 import maxCity from "../imports/Max-city-high-rise-gen.jpg";
 import carChurch1 from "../imports/Nord-A7-church-1.jpg";
-import carA5 from "../imports/Nord-A5.jpg";
+import nordC3 from "../imports/nord-c3.jpg";
 
 const cars = [
   { img: carA97.src, name: "Nord A9", category: "Executive Sedan", price: "From ₦56M", year: "2026", url: "https://nordmotion.com/vehicle/nord-a9/" },
-  { img: maxCity.src, name: "Nord Max", category: "Urban Edition", price: "From ₦89M", year: "2026", url: "https://nordmotion.com/vehicle/max/" },
+  { img: maxCity.src, name: "Nord Max", category: "Urban Edition", price: "From ₦38.9M", year: "2026", url: "https://nordmotion.com/vehicle/max/" },
   { img: carChurch1.src, name: "Nord A7", category: "Grand Tourer", price: "From ₦73M", year: "2026", url: "https://nordmotion.com/vehicle/nord-a7/" },
-  { img: carA5.src, name: "Nord C3", category: "Sport Coupé", price: "From ₦32.5M", year: "2026", url: "https://nordmotion.com/vehicle/nord-c3/" },
+  { img: nordC3.src, name: "Nord C3", category: "Sport Coupé", price: "From ₦32.5M", year: "2026", url: "https://nordmotion.com/vehicle/nord-c3/" },
 ];
 
 function CarModal({ car, onClose }: { car: typeof cars[0]; onClose: () => void }) {

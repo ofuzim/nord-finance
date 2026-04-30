@@ -116,7 +116,7 @@ const tiers = [
     title: "HNI Tier",
     color: "#9ca3af",
     rate: "9%",
-    rateNote: "With perfect score",
+    rateNote: "Per annum",
     score: "850+",
     features: [
       "6-month tenure only",
@@ -139,6 +139,7 @@ const tiers = [
       "Exclusive product reserved for verified HNI clients",
     ],
     requirements: [
+      "Perfect Nord Credit Score required",
       "Nord Credit Score of 850 or above",
       "Minimum 50% down payment",
       "Verified high-net-worth status",
@@ -270,6 +271,11 @@ function TierModal({ tier, onClose }: { tier: typeof tiers[0]; onClose: () => vo
           <div className="tier-modal-section" style={{ animationDelay: "0.4s" }}>
             <Link
               href="/credit-score"
+              prefetch={false}
+              onClick={(event) => {
+                event.preventDefault();
+                window.location.assign("/credit-score");
+              }}
               style={{
                 display: "block", textAlign: "center",
                 backgroundColor: tier.color === "#9ca3af" ? "rgba(255,255,255,0.1)" : tier.color,
@@ -542,6 +548,11 @@ export function WhatIsNord() {
           </p>
           <Link
             href="/credit-score"
+            prefetch={false}
+            onClick={(event) => {
+              event.preventDefault();
+              window.location.assign("/credit-score");
+            }}
             style={{
               flexShrink: 0,
               backgroundColor: "#C39529",

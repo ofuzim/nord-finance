@@ -1124,7 +1124,7 @@ export function ApplicationFormPage() {
                 Keep Going
               </button>
               <button
-                onClick={() => router.push("/credit-score?result=1")}
+                onClick={() => window.location.assign("/credit-score?result=1")}
                 style={{
                   border: "1px solid #C39529",
                   background: "transparent",
