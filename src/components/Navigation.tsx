@@ -3,16 +3,16 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { ArrowUp, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NordFinanceLogo } from "./NordFinanceLogo";
 
 export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const [isDocumentNavigating, setIsDocumentNavigating] = useState(false);
   const [mobileVehiclesOpen, setMobileVehiclesOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const lastScrollYRef = useRef(0);
   const applyDisabled = pathname.startsWith("/application") || pathname.startsWith("/credit-score");
 
@@ -97,14 +97,16 @@ export function Navigation() {
 
   const navigateDocument = (href: string) => {
     closeMenu();
-    setIsDocumentNavigating(true);
-    window.location.assign(href);
+    window.sessionStorage.setItem(
+      `nord-scroll:${pathname}`,
+      JSON.stringify({ x: window.scrollX, y: window.scrollY })
+    );
+    router.push(href);
   };
 
   // Close menu when pathname changes — covers all cross-page navigation.
   useEffect(() => {
     closeMenu();
-    setIsDocumentNavigating(false);
   }, [closeMenu, pathname]);
 
   useEffect(() => {
@@ -175,19 +177,6 @@ export function Navigation() {
     <>
       {/* Hidden checkbox — CSS-only mobile menu toggle, survives HMR */}
       <input type="checkbox" id="nav-toggle" aria-hidden="true" autoComplete="off" />
-
-      {isDocumentNavigating && (
-        <div
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 500,
-            backgroundColor: "#000",
-            pointerEvents: "all",
-          }}
-        />
-      )}
 
       <nav
         className="site-nav"
