@@ -35,6 +35,12 @@ export default function RootLayout({
                 var isRestore = nav && (nav.type === 'reload' || nav.type === 'back_forward');
                 var saved = sessionStorage.getItem('nord-scroll:' + location.pathname);
                 if (isRestore && saved) document.documentElement.dataset.restoreScroll = 'true';
+                addEventListener('pageshow', function () {
+                  document.documentElement.removeAttribute('data-restore-scroll');
+                }, { once: true });
+                setTimeout(function () {
+                  document.documentElement.removeAttribute('data-restore-scroll');
+                }, 900);
               } catch (_) {}
             `,
           }}

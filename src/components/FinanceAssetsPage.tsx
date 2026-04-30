@@ -78,6 +78,7 @@ export function FinanceAssetsPage() {
                 letterSpacing: "-0.03em",
                 color: "#fff",
                 maxWidth: 760,
+                margin: 0,
               }}
             >
               Forms, resources, <br />
@@ -93,6 +94,8 @@ export function FinanceAssetsPage() {
               lineHeight: 1.9,
               maxWidth: 420,
               marginLeft: "auto",
+              marginTop: 0,
+              marginBottom: 0,
             }}
           >
             A central library for Nord Finance documents, application resources, and guidance. Downloads will appear here once approved resources are available.
@@ -105,11 +108,11 @@ export function FinanceAssetsPage() {
           style={{
             maxWidth: 1440,
             margin: "0 auto",
-            padding: "82px 80px 120px",
+            padding: "72px 80px 72px",
           }}
           className="finance-assets-shell"
         >
-          <div style={{ marginBottom: 104 }}>
+          <div>
             <SectionLabel>Resource Categories</SectionLabel>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }} className="resource-category-grid">
               {resourceCategories.map((category) => {
@@ -179,6 +182,11 @@ export function FinanceAssetsPage() {
               line-height: 1.85 !important;
               margin: 0 !important;
               max-width: 100% !important;
+            }
+            .finance-assets-hero {
+              gap: 24px !important;
+              padding-top: 72px !important;
+              padding-bottom: 48px !important;
             }
           }
         `}</style>

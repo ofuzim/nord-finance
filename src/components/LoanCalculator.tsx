@@ -35,10 +35,10 @@ const TIERS = [
     portfolioNote: "Premium vehicle selection",
   },
   {
-    label: "Private Bridge",
+    label: "HNI Tier",
     rate: 0.09,
     display: "9% p.a.",
-    rateLabel: "Private Bridge Tier",
+    rateLabel: "HNI Tier",
     downPaymentRate: 0.5,
     tenures: [6],
     portfolioNote: "Full luxury portfolio",

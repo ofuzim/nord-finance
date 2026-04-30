@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { ArrowUp, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,10 +16,11 @@ export function Navigation() {
   const lastScrollYRef = useRef(0);
   const applyDisabled = pathname.startsWith("/application") || pathname.startsWith("/credit-score");
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     const toggle = document.getElementById("nav-toggle") as HTMLInputElement | null;
     if (toggle) toggle.checked = false;
-  };
+    setMobileVehiclesOpen(false);
+  }, []);
 
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId);
@@ -95,6 +96,7 @@ export function Navigation() {
   };
 
   const navigateDocument = (href: string) => {
+    closeMenu();
     setIsDocumentNavigating(true);
     window.location.assign(href);
   };
@@ -102,9 +104,20 @@ export function Navigation() {
   // Close menu when pathname changes — covers all cross-page navigation.
   useEffect(() => {
     closeMenu();
-    setMobileVehiclesOpen(false);
     setIsDocumentNavigating(false);
-  }, [pathname]);
+  }, [closeMenu, pathname]);
+
+  useEffect(() => {
+    window.addEventListener("pagehide", closeMenu);
+    window.addEventListener("pageshow", closeMenu);
+    window.addEventListener("popstate", closeMenu);
+
+    return () => {
+      window.removeEventListener("pagehide", closeMenu);
+      window.removeEventListener("pageshow", closeMenu);
+      window.removeEventListener("popstate", closeMenu);
+    };
+  }, [closeMenu]);
 
   const handleNavClick = (
     event: React.MouseEvent<HTMLAnchorElement>,
@@ -161,7 +174,7 @@ export function Navigation() {
   return (
     <>
       {/* Hidden checkbox — CSS-only mobile menu toggle, survives HMR */}
-      <input type="checkbox" id="nav-toggle" aria-hidden="true" />
+      <input type="checkbox" id="nav-toggle" aria-hidden="true" autoComplete="off" />
 
       {isDocumentNavigating && (
         <div
@@ -300,7 +313,7 @@ export function Navigation() {
               style={{
                 fontFamily: "'Poppins', sans-serif",
                 fontWeight: 600,
-                fontSize: 12,
+                fontSize: 13,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: applyDisabled ? "rgba(255,255,255,0.3)" : "#000",
@@ -384,7 +397,6 @@ export function Navigation() {
 
         {navLinks.map((link) => {
           const isActive = navLinkIsActive(link);
-          const words = link.label.split(" ");
           if ("dropdown" in link) {
             return (
               <div
@@ -426,7 +438,7 @@ export function Navigation() {
                   />
                 </button>
                 {mobileVehiclesOpen && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                     {vehicleLinks.map((vehicle) => (
                       <a
                         key={vehicle.href}
@@ -437,7 +449,7 @@ export function Navigation() {
                         style={{
                           fontFamily: "'Poppins', sans-serif",
                           fontWeight: 600,
-                          fontSize: 11,
+                          fontSize: 13,
                           letterSpacing: "0.18em",
                           textTransform: "uppercase",
                           color: "rgba(255,255,255,0.64)",
@@ -473,15 +485,7 @@ export function Navigation() {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#C39529")}
               onMouseLeave={(e) => (e.currentTarget.style.color = isActive ? "#C39529" : "white")}
             >
-              {words.length === 1 ? (
-                <span style={{ fontWeight: 400 }}>{words[0]}</span>
-              ) : (
-                <>
-                  <span style={{ fontWeight: 700 }}>{words[0]}</span>
-                  {" "}
-                  <span style={{ fontWeight: 400 }}>{words.slice(1).join(" ")}</span>
-                </>
-              )}
+              <span style={{ fontWeight: 400 }}>{link.label}</span>
             </Link>
           );
         })}
@@ -497,14 +501,14 @@ export function Navigation() {
             style={{
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 600,
-              fontSize: 12,
+              fontSize: 13,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
               color: applyDisabled ? "rgba(255,255,255,0.3)" : "#000",
               textDecoration: "none",
               backgroundColor: applyDisabled ? "rgba(255,255,255,0.1)" : "#C39529",
               borderRadius: 100,
-              padding: "11px 36px",
+              padding: "12px 38px",
               pointerEvents: applyDisabled ? "none" : "auto",
               WebkitTapHighlightColor: "transparent",
             }}
@@ -513,7 +517,7 @@ export function Navigation() {
           </Link>
 
           {/* Social icons */}
-          <div style={{ display: "flex", gap: 28, alignItems: "center", justifyContent: "center", marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 28, alignItems: "center", justifyContent: "center", marginTop: 28 }}>
             {[
               {
                 href: "#", label: "Instagram",
@@ -629,8 +633,8 @@ export function Navigation() {
           position: absolute;
           top: calc(100% - 10px);
           left: 50%;
-          min-width: 172px;
-          padding: 10px;
+          min-width: 208px;
+          padding: 14px;
           border: 1px solid rgba(255,255,255,0.12);
           border-radius: 8px;
           background: rgba(0,0,0,0.92);
@@ -650,12 +654,12 @@ export function Navigation() {
         }
         .nav-dropdown-item {
           display: block;
-          padding: 10px 12px;
+          padding: 13px 16px;
           border-radius: 6px;
           text-align: center;
           font-family: 'Poppins', sans-serif;
           font-weight: 600;
-          font-size: 10px;
+          font-size: 12px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
           color: rgba(255,255,255,0.72);

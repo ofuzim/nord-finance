@@ -79,7 +79,15 @@ function AccordionItem({
   );
 }
 
-export function FAQ() {
+export function FAQ({
+  compactTop = false,
+  hideResourcesLink = false,
+  compactBottom = false,
+}: {
+  compactTop?: boolean;
+  hideResourcesLink?: boolean;
+  compactBottom?: boolean;
+} = {}) {
   const [open, setOpen] = useState<number | null>(0);
   const toggle = (i: number) => setOpen(open === i ? null : i);
 
@@ -87,7 +95,15 @@ export function FAQ() {
   const right = faqs.slice(3, 6);
 
   return (
-    <section className="faq-section" style={{ backgroundColor: "#000", padding: "140px 0", position: "relative", overflow: "hidden" }}>
+    <section
+      className="faq-section"
+      style={{
+        backgroundColor: "#000",
+        padding: compactTop || compactBottom ? `${compactTop ? 72 : 140}px 0 ${compactBottom ? 72 : 140}px` : "140px 0",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       <div style={{
         position: "absolute", top: 0, left: 0, right: 0, height: 1,
         background: "linear-gradient(90deg, transparent, rgba(195,149,41,0.3) 30%, rgba(195,149,41,0.3) 70%, transparent)",
@@ -136,24 +152,25 @@ export function FAQ() {
           </div>
         </div>
 
-        {/* CTA */}
-        <div style={{ textAlign: "center" }}>
-          <a
-            href="/finance-assets"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 11,
-              letterSpacing: "0.16em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.45)", textDecoration: "none",
-              borderBottom: "1px solid rgba(195,149,41,0.25)", paddingBottom: 4,
-              transition: "color 0.2s ease",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#C39529")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
-          >
-            View Finance Assets & Resources →
-          </a>
-        </div>
+        {!hideResourcesLink && (
+          <div style={{ textAlign: "center" }}>
+            <a
+              href="/finance-assets"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: 11,
+                letterSpacing: "0.16em", textTransform: "uppercase",
+                color: "rgba(255,255,255,0.45)", textDecoration: "none",
+                borderBottom: "1px solid rgba(195,149,41,0.25)", paddingBottom: 4,
+                transition: "color 0.2s ease",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#C39529")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}
+            >
+              View Finance Assets & Resources →
+            </a>
+          </div>
+        )}
 
       </div>
 

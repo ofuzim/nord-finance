@@ -9,6 +9,10 @@ export function ScrollReset() {
   const pathname = usePathname()
   const isFirstRun = useRef(true)
 
+  const reveal = () => {
+    document.documentElement.removeAttribute('data-restore-scroll')
+  }
+
   useEffect(() => {
     const previousRestoration = window.history.scrollRestoration
     window.history.scrollRestoration = 'manual'
@@ -22,26 +26,30 @@ export function ScrollReset() {
 
     window.addEventListener('pagehide', saveScroll)
     window.addEventListener('beforeunload', saveScroll)
+    window.addEventListener('pageshow', reveal)
 
     return () => {
       saveScroll()
       window.removeEventListener('pagehide', saveScroll)
       window.removeEventListener('beforeunload', saveScroll)
+      window.removeEventListener('pageshow', reveal)
       window.history.scrollRestoration = previousRestoration
     }
   }, [pathname])
 
   useLayoutEffect(() => {
+    const fallbackReveal = window.setTimeout(reveal, 700)
+
     if (isFirstRun.current) {
       isFirstRun.current = false
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
 
       if (navigation?.type === 'reload' || navigation?.type === 'back_forward') {
         const saved = window.sessionStorage.getItem(scrollKeyForPath(pathname))
-        if (!saved) return
-
-        const reveal = () => {
-          document.documentElement.removeAttribute('data-restore-scroll')
+        if (!saved) {
+          reveal()
+          window.clearTimeout(fallbackReveal)
+          return
         }
         let x = 0
         let y = 0
@@ -50,6 +58,7 @@ export function ScrollReset() {
           ;({ x, y } = JSON.parse(saved) as { x: number; y: number })
         } catch {
           reveal()
+          window.clearTimeout(fallbackReveal)
           return
         }
 
@@ -65,11 +74,13 @@ export function ScrollReset() {
         })
         window.setTimeout(restore, 120)
         window.setTimeout(restore, 360)
-        return
+        return () => window.clearTimeout(fallbackReveal)
       }
     }
 
+    reveal()
     window.scrollTo(0, 0)
+    return () => window.clearTimeout(fallbackReveal)
   }, [pathname])
 
   return null

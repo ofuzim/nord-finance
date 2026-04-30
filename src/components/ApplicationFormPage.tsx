@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import tavetOutline from "@/imports/tavet-outline.svg";
+import carLoaderSvg from "@/imports/car.svg";
 import sedanOutline from "@/imports/sedan-outline.svg";
 import suvOutline from "@/imports/suv-outline.svg";
 import pickupOutline from "@/imports/pick-up-outline.svg";
@@ -321,6 +322,233 @@ function UploadBox({
       <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, lineHeight: 1.6 }}>{subtitle}</p>
       {fileName && <p style={{ color: "#22c55e", fontSize: 12, marginTop: 10 }}>{fileName}</p>}
     </label>
+  );
+}
+
+function ApplicationSuccessCarLoader() {
+  const carRef = useRef<HTMLDivElement>(null);
+  const speedRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const host = carRef.current;
+    const speed = speedRef.current;
+
+    if (!host || !speed) return;
+
+    async function buildLoader() {
+      const res = await fetch(carLoaderSvg.src);
+      const txt = await res.text();
+      if (cancelled || !host || !speed) return;
+
+      host.innerHTML = txt;
+
+      const svg = host.querySelector("svg");
+      if (svg) {
+        const wheels = [
+          { cx: 144.66, cy: 208.57, paths: [] as SVGGraphicsElement[] },
+          { cx: 462.86, cy: 208.57, paths: [] as SVGGraphicsElement[] },
+        ];
+        const R = 32;
+        const allPaths = Array.from(svg.querySelectorAll<SVGGraphicsElement>("path"));
+
+        allPaths.forEach((path) => {
+          let bbox: DOMRect;
+          try {
+            bbox = path.getBBox();
+          } catch {
+            return;
+          }
+
+          const cx = bbox.x + bbox.width / 2;
+          const cy = bbox.y + bbox.height / 2;
+
+          for (const wheel of wheels) {
+            if (Math.abs(cx - wheel.cx) < R && Math.abs(cy - wheel.cy) < R) {
+              wheel.paths.push(path);
+              break;
+            }
+          }
+        });
+
+        wheels.forEach((wheel) => {
+          if (!wheel.paths.length) return;
+
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("class", "wheel");
+          wheel.paths[0].parentNode?.insertBefore(g, wheel.paths[0]);
+          wheel.paths.forEach((path) => g.appendChild(path));
+
+          const bbox = g.getBBox();
+          const ox = bbox.x + bbox.width / 2;
+          const oy = bbox.y + bbox.height / 2;
+          g.style.transformOrigin = `${ox}px ${oy}px`;
+        });
+      }
+
+      speed.innerHTML = "";
+      const N = 9;
+      for (let i = 0; i < N; i++) {
+        const span = document.createElement("span");
+        const top = 6 + i * (88 / N) + (Math.random() * 4 - 2);
+        const len = 18 + Math.random() * 28;
+        const dur = 0.5 + Math.random() * 0.9;
+        const delay = -Math.random() * dur;
+        span.style.top = `${top}%`;
+        span.style.width = `${len}%`;
+        span.style.left = `${60 + Math.random() * 30}%`;
+        span.style.animationDuration = `${dur}s`;
+        span.style.animationDelay = `${delay}s`;
+        span.style.opacity = (0.35 + Math.random() * 0.5).toFixed(2);
+        speed.appendChild(span);
+      }
+    }
+
+    buildLoader().catch(() => {});
+
+    return () => {
+      cancelled = true;
+      host.innerHTML = "";
+      speed.innerHTML = "";
+    };
+  }, []);
+
+  return (
+    <div className="success-loader-stage" role="status" aria-live="polite" aria-label="Loading">
+      <div className="success-loader-scene">
+        <div className="success-loader-speed" ref={speedRef} aria-hidden="true" />
+        <div className="success-loader-exhaust" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="success-loader-car" ref={carRef} aria-hidden="true" />
+      </div>
+      <style>{`
+        .success-loader-stage {
+          width: min(520px, 82vw);
+          margin: 0 auto 32px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 36px;
+        }
+
+        .success-loader-scene {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 593 / 326;
+          overflow: visible;
+        }
+
+        .success-loader-speed {
+          position: absolute;
+          inset: 8% -6% 22% -6%;
+          pointer-events: none;
+          overflow: hidden;
+          opacity: 0.55;
+        }
+
+        .success-loader-speed span {
+          position: absolute;
+          height: 2px;
+          background: linear-gradient(to right, transparent, rgba(184, 184, 180, 0.65), transparent);
+          border-radius: 2px;
+          animation: success-loader-whoosh linear infinite;
+          will-change: transform, opacity;
+        }
+
+        .success-loader-car {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          animation: success-loader-bob 0.42s ease-in-out infinite alternate;
+          will-change: transform;
+        }
+
+        .success-loader-car svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+          overflow: visible;
+        }
+
+        .success-loader-exhaust {
+          position: absolute;
+          left: 11%;
+          top: 58%;
+          width: 18%;
+          height: 22%;
+          pointer-events: none;
+        }
+
+        .success-loader-exhaust span {
+          position: absolute;
+          left: 0;
+          top: 50%;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: rgba(184, 184, 180, 0.35);
+          animation: success-loader-puff 1.6s ease-out infinite;
+          will-change: transform, opacity;
+        }
+
+        .success-loader-exhaust span:nth-child(2) { animation-delay: 0.4s; }
+        .success-loader-exhaust span:nth-child(3) { animation-delay: 0.8s; }
+        .success-loader-exhaust span:nth-child(4) { animation-delay: 1.2s; }
+
+        @keyframes success-loader-whoosh {
+          0% { transform: translateX(110%); opacity: 0; }
+          20% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { transform: translateX(-220%); opacity: 0; }
+        }
+
+        @keyframes success-loader-bob {
+          0% { transform: translate3d(0, 0, 0) rotate(-0.15deg); }
+          100% { transform: translate3d(0, -1.1%, 0) rotate(0.15deg); }
+        }
+
+        .success-loader-car .wheel {
+          transform-box: view-box;
+          transform: rotate(0deg);
+          animation: success-loader-spin 0.55s linear infinite;
+          will-change: transform;
+        }
+
+        @keyframes success-loader-puff {
+          0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+          15% { opacity: 0.55; }
+          100% { transform: translate(-70px, -14px) scale(2.4); opacity: 0; }
+        }
+
+        @keyframes success-loader-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(-360deg); }
+        }
+
+        .success-loader-car svg path,
+        .success-loader-car svg rect.cls-2 {
+          fill: #b8b8b4;
+        }
+
+        .success-loader-car svg rect.cls-1 {
+          fill: transparent;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .success-loader-speed span,
+          .success-loader-car,
+          .success-loader-car .wheel,
+          .success-loader-exhaust span {
+            animation: none !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -646,7 +874,7 @@ export function ApplicationFormPage() {
         >
           {success ? (
             <div style={{ minHeight: 720, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 0 72px" }}>
-              <div style={{ fontSize: 58, marginBottom: 22 }}>OK</div>
+              <ApplicationSuccessCarLoader />
               <h2 style={{ fontFamily: "'Morpha', Georgia, serif", fontSize: 52, lineHeight: 1.05, marginBottom: 18 }}>
                 Application <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Submitted</em>
               </h2>
@@ -731,7 +959,8 @@ export function ApplicationFormPage() {
                     <div className="upload-grid">
                       <UploadBox title="Government Issued ID" subtitle="Passport, NIN card, Driver's Licence or PVC" name="governmentId" uploads={uploads} setUploads={setUploads} />
                       <UploadBox title="Passport Photograph" subtitle="Recent clear photo, white background preferred" name="passport" uploads={uploads} setUploads={setUploads} />
-                      <UploadBox title="Proof of Income" subtitle="Bank statement (6 months) or salary payslip" name="income" uploads={uploads} setUploads={setUploads} />
+                      <UploadBox title="Bank Statement" subtitle="Most recent 12 months" name="bankStatement" uploads={uploads} setUploads={setUploads} />
+                      <UploadBox title="Payslip" subtitle="Recent salary payslip" name="payslip" uploads={uploads} setUploads={setUploads} />
                       <UploadBox title="Proof of Residence" subtitle="Current utility bill or residence evidence" name="residence" uploads={uploads} setUploads={setUploads} />
                     </div>
                   </div>
@@ -968,7 +1197,7 @@ export function ApplicationFormPage() {
         }
         .upload-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(3, 1fr);
           gap: 18px;
         }
         .category-grid {
@@ -1059,6 +1288,9 @@ export function ApplicationFormPage() {
           .application-grid {
             grid-template-columns: 1fr !important;
           }
+          .upload-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
           .category-grid {
             grid-template-columns: repeat(2, 1fr) !important;
           }
@@ -1066,6 +1298,9 @@ export function ApplicationFormPage() {
         @media (max-width: 600px) {
           input, select, textarea { font-size: 1rem !important; }
           input[type="date"] { width: 100% !important; min-width: 0 !important; max-width: 100% !important; box-sizing: border-box !important; appearance: none !important; -webkit-appearance: none !important; }
+          .upload-grid {
+            grid-template-columns: 1fr !important;
+          }
           .application-grid > *, .upload-grid > * { min-width: 0; overflow: hidden; }
           .step-title-block {
             flex-direction: column !important;

@@ -20,7 +20,7 @@ export default function FinanceAssetsPage() {
     >
       <Navigation />
       <FinanceAssetsPageContent />
-      <FAQ />
+      <FAQ compactTop compactBottom hideResourcesLink />
       <Footer />
     </div>
   )

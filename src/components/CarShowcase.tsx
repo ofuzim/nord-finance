@@ -167,7 +167,7 @@ export function CarShowcase() {
               flex: "0 0 320px",
               cursor: "pointer",
               transition: "width 0.35s cubic-bezier(0.22, 1, 0.36, 1), max-width 0.35s cubic-bezier(0.22, 1, 0.36, 1), flex-basis 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
-              transitionDelay: "0s",
+              transitionDelay: "0.16s",
             }}
             className="showcase-card"
           >
