@@ -24,8 +24,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                history.scrollRestoration = 'manual';
+                var nav = performance.getEntriesByType('navigation')[0];
+                var isRestore = nav && (nav.type === 'reload' || nav.type === 'back_forward');
+                var saved = sessionStorage.getItem('nord-scroll:' + location.pathname);
+                if (isRestore && saved) document.documentElement.dataset.restoreScroll = 'true';
+              } catch (_) {}
+            `,
+          }}
+        />
+        <style>{`html[data-restore-scroll="true"] body { visibility: hidden; }`}</style>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

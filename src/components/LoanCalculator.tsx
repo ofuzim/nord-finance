@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { vehicleGroups, indicativePriceForModel } from "@/lib/vehicleCatalog";
+import { vehicleByName, vehicles, type Vehicle } from "@/lib/vehicleCatalog";
 
 const DEFAULT_CALC_MODEL = "Nord A5";
 
@@ -45,6 +45,11 @@ const TIERS = [
   },
 ];
 
+const vehicleOptionsByCategory = vehicles.reduce<Record<string, Vehicle[]>>((groups, vehicle) => {
+  groups[vehicle.groupCategory] = [...(groups[vehicle.groupCategory] ?? []), vehicle];
+  return groups;
+}, {});
+
 function formatNaira(amount: number): string {
   return "₦" + Math.round(amount).toLocaleString("en-NG");
 }
@@ -62,7 +67,8 @@ export function LoanCalculator() {
   const [tenure, setTenure] = useState(TIERS[0].tenures[0]);
 
   const selectedTier = TIERS[tierIdx];
-  const vehiclePrice = indicativePriceForModel(selectedModel);
+  const selectedVehicle = vehicleByName.get(selectedModel) ?? vehicles[0];
+  const vehiclePrice = selectedVehicle.priceValue;
   const downPaymentRate = selectedTier.downPaymentRate;
   const loanRate = 1 - downPaymentRate;
 
@@ -283,11 +289,11 @@ export function LoanCalculator() {
                   (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")
                 }
               >
-                {vehicleGroups.map((group) => (
-                  <optgroup key={group.category} label={group.category}>
-                    {group.models.map((model) => (
-                      <option key={model} value={model}>
-                        {model} · {formatNaira(indicativePriceForModel(model))}
+                {Object.entries(vehicleOptionsByCategory).map(([category, options]) => (
+                  <optgroup key={category} label={category}>
+                    {options.map((car) => (
+                      <option key={car.name} value={car.name}>
+                        {car.name} · {car.price}
                       </option>
                     ))}
                   </optgroup>

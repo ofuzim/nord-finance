@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import carBg from "../imports/A9-10.jpg";
+import carBg from "../assets/vehicles/photos/nord-a9-detail.jpg";
 
 const tiers = [
   {

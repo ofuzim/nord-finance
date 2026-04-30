@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import carBg from "../imports/C3-6-2.jpg";
+import carBg from "../assets/vehicles/photos/nord-c3-detail.jpg";
 
 export function CTABand() {
   return (

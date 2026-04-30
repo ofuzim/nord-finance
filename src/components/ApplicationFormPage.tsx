@@ -47,16 +47,23 @@ const states = [
 
 const categoryDescriptions: Record<string, string> = {
   "Sedans": "Classic 4-door passenger cars — comfortable, fuel-efficient, ideal for daily commuting.",
+  "Coupes": "Sport coupés — compact, agile, and designed for expressive everyday driving.",
   "SUVs": "Sport Utility Vehicles — spacious, high-riding, suited for families and varied terrain.",
   "Pickup Trucks": "Rugged trucks with an open cargo bed — built for work and off-road capability.",
   "Buses": "Commercial passenger buses — designed for group transport and fleet operations.",
-  "Tavet Models": "Tavet by Nord — a lineup of fully electric vehicles from a sister brand, built for performance and efficiency.",
+  "Electric Vehicles": "Fully electric vehicles from Tavet by Nord, built for efficient city, sedan, and logistics use cases.",
 };
 
 const categoryIcons: Record<string, React.ReactNode> = {
   "Sedans": (
     <svg width="52" height="26" viewBox="0 0 52 26" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 22 L6 16 L14 11 L24 9 L32 9 L42 12 L50 17 L50 22 Z" />
+    </svg>
+  ),
+  "Coupes": (
+    <svg width="52" height="26" viewBox="0 0 52 26" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 22 L7 16 L17 11 L31 10 L43 14 L50 20 L50 22 Z" />
+      <path d="M17 11 L24 16 L36 16 L43 14" />
     </svg>
   ),
   "SUVs": (
@@ -79,7 +86,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
       <rect x="33" y="9" width="5" height="6" rx="1" />
     </svg>
   ),
-  "Tavet Models": (
+  "Electric Vehicles": (
     <svg width="52" height="26" viewBox="0 0 52 26" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 22 L4 18 L12 11 L26 8 L40 10 L48 16 L50 22 Z" />
     </svg>
@@ -778,10 +785,10 @@ export function ApplicationFormPage() {
                           <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
                             {group.category}
                           </span>
-                          {group.category === "Tavet Models" ? (
+                          {group.category === "Electric Vehicles" ? (
                             <img
                               src={tavetOutline.src}
-                              alt="Tavet"
+                              alt="Electric vehicle"
                               width={320}
                               height={118}
                               style={{
@@ -817,10 +824,10 @@ export function ApplicationFormPage() {
                                   : "brightness(0) invert(1) opacity(0.6)",
                               }}
                             />
-                          ) : group.category === "Sedans" ? (
+                          ) : group.category === "Sedans" || group.category === "Coupes" ? (
                             <img
                               src={sedanOutline.src}
-                              alt="Sedan"
+                              alt={group.category === "Coupes" ? "Coupe" : "Sedan"}
                               width={320}
                               height={118}
                               style={{

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from "react";
-import churchImg from "../imports/Nord-A7-church-2.jpg";
+import churchImg from "../assets/vehicles/photos/nord-a7-detail.jpg";
 
 const steps = [
   {

@@ -1,13 +1,15 @@
 'use client'
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { NordCreditScoreWidget } from "./NordCreditScoreWidget";
-import heroBg from "../imports/C9_A9_A7_dark_smoky_collage.jpg";
+import { vehicleByName, type Vehicle } from "@/lib/vehicleCatalog";
+import { VehicleModal } from "./VehicleModal";
+import heroBg from "../assets/vehicles/photos/nord-hero-collage.jpg";
 
 const marqueeNames = [
-  "Nord A3", "Nord A5", "Nord A7", "Nord A9", "Nord C3", "Nord C9", "Demir", "Tusk", "Max", "Flit",
-  "Tripper", "CICA", "Tavet Garent", "Tavet Vant", "Tavet Luto",
+  "Nord C3", "Nord A3", "Nord A5", "Nord A7", "Nord A9", "Nord C9", "Nord Demir", "Nord Max",
+  "Nord Tusk", "Nord Flit", "Nord Tripper", "Tavet Luto", "Tavet Garent", "Tavet Vant",
 ];
 const heroMarqueeItems = [...marqueeNames, ...marqueeNames];
 
@@ -18,7 +20,11 @@ const stats = [
   { value: "48mo",     label: "Max Tenure"   },
 ];
 
+const getMarqueeCar = (name: string) => vehicleByName.get(name) ?? null;
+
 export function Hero() {
+  const [selectedCar, setSelectedCar] = useState<Vehicle | null>(null);
+
   return (
     <section
       className="hero-section"
@@ -343,29 +349,49 @@ export function Hero() {
         <div className="marquee-track" style={{
           display: "flex", alignItems: "center", width: "max-content",
           animation: "heroMarquee 52s linear infinite",
+          animationPlayState: selectedCar ? "paused" : "running",
         }}>
-          {heroMarqueeItems.map((name, i) => (
-            <React.Fragment key={i}>
-              <span style={{
-                fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: 10,
-                letterSpacing: "0.2em", textTransform: "uppercase",
-                color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap",
-                padding: "0 32px", cursor: "pointer", transition: "color 0.2s ease",
-              }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget.style.color = "#C39529");
-                  (e.currentTarget.closest(".marquee-track") as HTMLElement | null)?.style.setProperty("animation-play-state", "paused");
+          {heroMarqueeItems.map((name, i) => {
+            const car = getMarqueeCar(name);
+
+            return (
+              <React.Fragment key={i}>
+                <span style={{
+                  fontFamily: "'Poppins', sans-serif", fontWeight: 300, fontSize: 10,
+                  letterSpacing: "0.2em", textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap",
+                  padding: "0 32px", cursor: car ? "pointer" : "default", transition: "color 0.2s ease",
                 }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget.style.color = "rgba(255,255,255,0.2)");
-                  (e.currentTarget.closest(".marquee-track") as HTMLElement | null)?.style.setProperty("animation-play-state", "running");
-                }}
-              >{name}</span>
-              <span style={{ color: "#C39529", fontSize: 5, flexShrink: 0 }}>◆</span>
-            </React.Fragment>
-          ))}
+                  role={car ? "button" : undefined}
+                  tabIndex={car ? 0 : undefined}
+                  onClick={() => {
+                    if (car) setSelectedCar(car);
+                  }}
+                  onKeyDown={(e) => {
+                    if (car && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      setSelectedCar(car);
+                    }
+                  }}
+                  onMouseEnter={(e) => {
+                    if (car) e.currentTarget.style.color = "#C39529";
+                    (e.currentTarget.closest(".marquee-track") as HTMLElement | null)?.style.setProperty("animation-play-state", "paused");
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "rgba(255,255,255,0.45)";
+                    if (!selectedCar) {
+                      (e.currentTarget.closest(".marquee-track") as HTMLElement | null)?.style.setProperty("animation-play-state", "running");
+                    }
+                  }}
+                >{name}</span>
+                <span style={{ color: "#C39529", fontSize: 5, flexShrink: 0 }}>◆</span>
+              </React.Fragment>
+            );
+          })}
         </div>
       </div>
+
+      {selectedCar && <VehicleModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
 
       <style>{`
         @keyframes heroMarquee {
