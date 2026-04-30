@@ -35,7 +35,7 @@ export type VehicleGroup = {
 };
 
 export const vehicles: Vehicle[] = [
-  { img: nordC3.src, icon: "coupe", name: "Nord C3", category: "Sport Coupé", groupCategory: "Coupes", site: "https://www.nordmotion.com", price: "From ₦32.5M", priceValue: 32_500_000, year: "2026", url: "https://nordmotion.com/vehicle/nord-c3/" },
+  { img: nordC3.src, icon: "coupe", name: "Nord C3", category: "Sport Coupé", groupCategory: "Sedans", site: "https://www.nordmotion.com", price: "From ₦32.5M", priceValue: 32_500_000, year: "2026", url: "https://nordmotion.com/vehicle/nord-c3/" },
   { img: nordA3.src, icon: "sedan", name: "Nord A3", category: "Sedan", groupCategory: "Sedans", site: "https://www.nordmotion.com", price: "From ₦46.94M", priceValue: 46_940_000, year: "2026", url: "https://nordmotion.com/vehicle/nord-a3/" },
   { img: carA5.src, icon: "suv", name: "Nord A5", category: "SUV", groupCategory: "SUVs", site: "https://www.nordmotion.com", price: "From ₦34.5M", priceValue: 34_500_000, year: "2026", url: "https://nordmotion.com/vehicle/nord-a5/" },
   { img: carChurch1.src, icon: "suv", name: "Nord A7", category: "SUV", groupCategory: "SUVs", site: "https://www.nordmotion.com", price: "From ₦72.83M", priceValue: 72_830_000, year: "2026", url: "https://nordmotion.com/vehicle/nord-a7/" },

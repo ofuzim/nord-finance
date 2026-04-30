@@ -1,4 +1,5 @@
 import { Navigation } from '@/components/Navigation'
+import { HashScroll } from '@/components/HashScroll'
 import { Hero } from '@/components/Hero'
 import { HowItWorks } from '@/components/HowItWorks'
 import { CarShowcase } from '@/components/CarShowcase'
@@ -19,6 +20,7 @@ export default function HomePage() {
       }}
     >
       <Navigation />
+      <HashScroll />
       <Hero />
 <HowItWorks />
       <WhatIsNord />

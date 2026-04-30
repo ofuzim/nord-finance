@@ -384,7 +384,7 @@ export function Hero() {
                     }
                   }}
                 >{name}</span>
-                <span style={{ color: "#C39529", fontSize: 5, flexShrink: 0 }}>◆</span>
+                <span className="marquee-separator" style={{ color: "#C39529", fontSize: 5, flexShrink: 0 }}>◆</span>
               </React.Fragment>
             );
           })}
@@ -437,7 +437,8 @@ export function Hero() {
           .hero-stats { display: none !important; }
           .hero-models-label { display: none !important; }
           .hero-headline { font-size: clamp(44px, 8vw, 68px) !important; }
-          .marquee-track span { font-size: 9px !important; letter-spacing: 0.18em !important; padding: 0 8px !important; }
+          .marquee-track span { font-size: 9px !important; letter-spacing: 0.18em !important; padding: 0 14px !important; }
+          .marquee-track .marquee-separator { font-size: 3px !important; padding: 0 !important; letter-spacing: 0 !important; }
         }
       `}</style>
     </section>

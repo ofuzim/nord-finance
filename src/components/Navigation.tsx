@@ -50,9 +50,6 @@ export function Navigation() {
       setActiveSection("");
       return;
     }
-    if (window.location.hash === "#plans") {
-      window.setTimeout(() => scrollToSection("plans"), 80);
-    }
     const updateActiveSection = () => {
       const plans = document.getElementById("plans");
       if (!plans) {
@@ -61,7 +58,7 @@ export function Navigation() {
       }
       const rect = plans.getBoundingClientRect();
       const headerOffset = 72;
-      const isPlansActive = rect.top <= headerOffset && rect.bottom > headerOffset;
+      const isPlansActive = rect.top < window.innerHeight && rect.bottom > headerOffset;
       setActiveSection(isPlansActive ? "plans" : "");
     };
     updateActiveSection();
@@ -165,7 +162,8 @@ export function Navigation() {
     }
 
     event.preventDefault();
-    navigateDocument(link.href);
+    window.sessionStorage.setItem('nord-goto-section', link.section);
+    navigateDocument('/');
   };
 
   const handleBackToTop = () => {

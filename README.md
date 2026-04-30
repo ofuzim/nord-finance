@@ -20,7 +20,13 @@ Opens at [http://localhost:3000](http://localhost:3000).
 
 ## Testing on mobile
 
-Run a production build instead:
+Run a development build:
+
+```bash
+npm run dev -- --hostname 0.0.0.0 --port 3002
+```
+
+Run a production build:
 
 ```bash
 npm run build && npm run start
@@ -30,6 +36,11 @@ Find your laptop's local IP:
 
 ```bash
 ipconfig getifaddr en0
+```
+Kill all processes on port 3002:
+
+```bash
+lsof -ti:3002 | xargs kill -9
 ```
 
 Open `http://[your-ip]:3000` on your phone. Both devices must be on the same Wi-Fi network.

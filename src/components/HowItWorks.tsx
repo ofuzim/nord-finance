@@ -176,7 +176,24 @@ export function HowItWorks() {
                 border: "1px solid rgba(195,149,41,0.35)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "#C39529", fontSize: 14, flexShrink: 0,
-              }}>⏱</div>
+              }}>
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="13" r="8" />
+                  <path d="M12 9v4l2.5 2.5" />
+                  <path d="M9 2h6" />
+                  <path d="M12 2v3" />
+                </svg>
+              </div>
               <div>
                 <span style={{
                   display: "block", fontFamily: "'Poppins', sans-serif",

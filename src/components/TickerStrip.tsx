@@ -34,7 +34,7 @@ export function TickerStrip() {
       >
         {doubled.map((item, i) => (
           <React.Fragment key={i}>
-            <span
+            <span className="ticker-item"
               style={{
                 fontFamily: "'Poppins', sans-serif",
                 fontWeight: 400,
@@ -47,16 +47,7 @@ export function TickerStrip() {
             >
               {item}
             </span>
-            <span
-              style={{
-                width: 3,
-                height: 3,
-                borderRadius: "50%",
-                backgroundColor: "rgba(195,149,41,0.5)",
-                flexShrink: 0,
-                marginRight: 4,
-              }}
-            />
+            <span className="ticker-dot" />
           </React.Fragment>
         ))}
       </div>
@@ -65,6 +56,26 @@ export function TickerStrip() {
         @keyframes ticker {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        .ticker-dot {
+          display: block;
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          -webkit-border-radius: 50%;
+          background-color: rgba(195,149,41,0.5);
+          flex-shrink: 0;
+          margin-right: 4px;
+          line-height: 0;
+          font-size: 0;
+          /* Promote to own compositing layer — fixes iOS Safari border-radius
+             disappearing inside CSS-animated (translateX) containers */
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+        }
+        @media (max-width: 768px) {
+          .ticker-item { padding: 0 4px !important; }
+          .ticker-dot  { width: 2px !important; height: 2px !important; margin-right: 2px !important; }
         }
       `}</style>
     </div>

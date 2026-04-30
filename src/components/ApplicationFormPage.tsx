@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import tavetOutline from "@/imports/tavet-outline.svg";
 import carLoaderSvg from "@/imports/car.svg";
@@ -35,7 +34,7 @@ const steps = [
   "Personal Information",
   "Identity Verification",
   "Vehicle of Interest",
-  "Consent & Submit",
+  "Consent And Submit",
 ];
 
 const states = [
@@ -47,8 +46,7 @@ const states = [
 ];
 
 const categoryDescriptions: Record<string, string> = {
-  "Sedans": "Classic 4-door passenger cars — comfortable, fuel-efficient, ideal for daily commuting.",
-  "Coupes": "Sport coupés — compact, agile, and designed for expressive everyday driving.",
+  "Sedans": "Passenger cars and sport coupés — comfortable, agile, and ideal for daily driving.",
   "SUVs": "Sport Utility Vehicles — spacious, high-riding, suited for families and varied terrain.",
   "Pickup Trucks": "Rugged trucks with an open cargo bed — built for work and off-road capability.",
   "Buses": "Commercial passenger buses — designed for group transport and fleet operations.",
@@ -59,12 +57,6 @@ const categoryIcons: Record<string, React.ReactNode> = {
   "Sedans": (
     <svg width="52" height="26" viewBox="0 0 52 26" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 22 L6 16 L14 11 L24 9 L32 9 L42 12 L50 17 L50 22 Z" />
-    </svg>
-  ),
-  "Coupes": (
-    <svg width="52" height="26" viewBox="0 0 52 26" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 22 L7 16 L17 11 L31 10 L43 14 L50 20 L50 22 Z" />
-      <path d="M17 11 L24 16 L36 16 L43 14" />
     </svg>
   ),
   "SUVs": (
@@ -614,7 +606,6 @@ function StepNav({
 }
 
 export function ApplicationFormPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const carriedScore = searchParams.get("score");
   const carriedTier = searchParams.get("tier");
@@ -637,6 +628,9 @@ export function ApplicationFormPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadValues>({});
+  const applicationUrlRef = useRef("");
+  const currentStepRef = useRef(initialStep);
+  const successRef = useRef(initialSuccess);
   const [values, setValues] = useState<FormValues>({
     firstName: carriedFirstName,
     lastName: carriedLastName,
@@ -652,21 +646,95 @@ export function ApplicationFormPage() {
 
   const progress = success ? 100 : (currentStep / steps.length) * 100;
 
-  const scrollToFormSection = () => {
+  useEffect(() => {
+    successRef.current = success;
+  }, [success]);
+
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+
+  const scrollToFormSection = useCallback(() => {
     if (formRef.current) {
-      const top = formRef.current.getBoundingClientRect().top + window.scrollY - 72;
+      const headerOffset = 72;
+      const top = formRef.current.getBoundingClientRect().top + window.scrollY - headerOffset;
       window.scrollTo({ top, behavior: "smooth" });
     }
-  };
+  }, []);
+
+  const scheduleFormScroll = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollToFormSection();
+      window.setTimeout(scrollToFormSection, 80);
+    });
+  }, [scrollToFormSection]);
+
+  useEffect(() => {
+    applicationUrlRef.current = `${window.location.pathname}${window.location.search}`;
+    window.history.pushState({ nordApplicationGuard: true }, "", applicationUrlRef.current);
+
+    const handleBrowserBack = () => {
+      if (successRef.current) {
+        window.location.assign("/credit-score?result=1");
+        return;
+      }
+
+      if (window.location.pathname === "/application") {
+        const params = new URLSearchParams(window.location.search);
+        const stepParamFromUrl = params.get("step");
+        const stepFromUrl = Math.min(Math.max(parseInt(stepParamFromUrl ?? "1", 10) || 1, 1), steps.length);
+
+        if (currentStepRef.current === 1 && stepFromUrl === 1) {
+          const currentApplicationUrl =
+            applicationUrlRef.current || `${window.location.pathname}${window.location.search}`;
+          window.history.pushState({ nordApplicationGuard: true }, "", currentApplicationUrl);
+          setShowCancelModal(true);
+          return;
+        }
+
+        setSuccess(false);
+        setCurrentStepState(stepFromUrl);
+        applicationUrlRef.current = `${window.location.pathname}${window.location.search}`;
+        scheduleFormScroll();
+        return;
+      }
+
+      const currentApplicationUrl =
+        applicationUrlRef.current || `/application${window.location.search}`;
+      window.history.pushState({ nordApplicationGuard: true }, "", currentApplicationUrl);
+      setShowCancelModal(true);
+    };
+
+    window.addEventListener("popstate", handleBrowserBack);
+    return () => {
+      window.removeEventListener("popstate", handleBrowserBack);
+    };
+  }, [scheduleFormScroll]);
 
   const setStep = (step: number) => {
     setSuccess(false);
     setCurrentStepState(step);
     const params = new URLSearchParams(searchParams.toString());
     params.set("step", String(step));
-    router.push(`?${params.toString()}`, { scroll: false });
-    scrollToFormSection();
+    const nextUrl = `?${params.toString()}`;
+    applicationUrlRef.current = `${window.location.pathname}${nextUrl}`;
+    window.history.pushState(null, "", nextUrl);
+    scheduleFormScroll();
   };
+
+  useEffect(() => {
+    if (!success) return;
+
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    requestAnimationFrame(() => {
+      scrollToPageTop();
+      window.setTimeout(scrollToPageTop, 120);
+      window.setTimeout(scrollToPageTop, 360);
+    });
+  }, [success]);
 
   const selectedVehicle = values.vehicleModel;
 
@@ -710,8 +778,9 @@ export function ApplicationFormPage() {
       setSuccess(true);
       const params = new URLSearchParams(searchParams.toString());
       params.set("step", "success");
-      router.push(`?${params.toString()}`, { scroll: false });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const successUrl = `?${params.toString()}`;
+      applicationUrlRef.current = `${window.location.pathname}${successUrl}`;
+      window.history.replaceState(null, "", successUrl);
     }, 1400);
   };
 
@@ -1011,9 +1080,6 @@ export function ApplicationFormPage() {
                               </svg>
                             )}
                           </span>
-                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                            {group.category}
-                          </span>
                           {group.category === "Electric Vehicles" ? (
                             <img
                               src={tavetOutline.src}
@@ -1053,10 +1119,10 @@ export function ApplicationFormPage() {
                                   : "brightness(0) invert(1) opacity(0.6)",
                               }}
                             />
-                          ) : group.category === "Sedans" || group.category === "Coupes" ? (
+                          ) : group.category === "Sedans" ? (
                             <img
                               src={sedanOutline.src}
-                              alt={group.category === "Coupes" ? "Coupe" : "Sedan"}
+                              alt="Sedan"
                               width={320}
                               height={118}
                               style={{
@@ -1080,6 +1146,9 @@ export function ApplicationFormPage() {
                               }}
                             />
                           ) : categoryIcons[group.category]}
+                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+                            {group.category}
+                          </span>
                         </button>
                       );
                     })}
@@ -1116,7 +1185,11 @@ export function ApplicationFormPage() {
                       <p style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.7 }}>
                         Not sure?{" "}
                         <a
-                          href={vehicleGroups.find((g) => g.category === selectedCategory)?.site}
+                          href={
+                            selectedCategory === "Electric Vehicles"
+                              ? "https://nordmotion.com/vehicles/"
+                              : vehicleGroups.find((g) => g.category === selectedCategory)?.site
+                          }
                           target="_blank"
                           rel="noreferrer"
                           style={{ color: "#C39529", textDecoration: "none" }}

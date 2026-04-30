@@ -27,8 +27,13 @@ export function CarShowcase() {
   }, []);
 
   const scroll = (dir: "left" | "right") => {
-    if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: dir === "right" ? 356 : -356, behavior: "smooth" });
+    const track = scrollRef.current;
+    const firstCard = track?.firstElementChild as HTMLElement | null;
+    if (!track || !firstCard) return;
+
+    const gap = Number.parseFloat(window.getComputedStyle(track).columnGap || "0");
+    const itemWidth = firstCard.getBoundingClientRect().width + gap;
+    track.scrollBy({ left: dir === "right" ? itemWidth : -itemWidth, behavior: "smooth" });
   };
 
   return (
@@ -309,7 +314,7 @@ export function CarShowcase() {
             overflow-y: hidden !important;
             padding-left: 0 !important;
             padding-right: 24px !important;
-            scroll-snap-type: x proximity !important;
+            scroll-snap-type: x mandatory !important;
             touch-action: pan-x pan-y pinch-zoom !important;
             -webkit-overflow-scrolling: touch;
           }
@@ -320,6 +325,7 @@ export function CarShowcase() {
             max-width: 270px !important;
             height: 290px !important;
             scroll-snap-align: start !important;
+            scroll-snap-stop: always !important;
           }
           .showcase-card:hover {
             width: 74vw !important;

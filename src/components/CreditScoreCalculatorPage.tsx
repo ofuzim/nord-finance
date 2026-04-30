@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   calculateCreditScore,
   calculateCreditScoreCompletion,
@@ -366,7 +365,6 @@ export function CreditScoreCalculatorPage() {
   const [resultRevealed, setResultRevealed] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const router = useRouter();
 
   // Restore state from sessionStorage when landing on ?result=1
   useEffect(() => {
@@ -387,6 +385,7 @@ export function CreditScoreCalculatorPage() {
   const resultStackRef = useRef<HTMLDivElement>(null);
   const formSectionRef = useRef<HTMLElement>(null);
   const calculationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const incomeInputRef = useRef<HTMLInputElement>(null);
   const obligationsInputRef = useRef<HTMLInputElement>(null);
   const downPayInputRef = useRef<HTMLInputElement>(null);
@@ -485,6 +484,15 @@ export function CreditScoreCalculatorPage() {
     }
   };
 
+  const scrollToResultStack = useCallback(() => {
+    const target = resultStackRef.current ?? formSectionRef.current;
+    if (!target) return;
+
+    const headerOffset = window.matchMedia("(max-width: 700px)").matches ? 84 : 128;
+    const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top, behavior: "smooth" });
+  }, []);
+
   const revealResult = () => {
     if (!canCalculate || isCalculating) return;
     try {
@@ -501,6 +509,24 @@ export function CreditScoreCalculatorPage() {
   useEffect(() => {
     return () => {
       if (calculationTimerRef.current) clearTimeout(calculationTimerRef.current);
+      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const resetNavigationState = () => {
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
+      setIsNavigating(false);
+    };
+
+    window.addEventListener("pagehide", resetNavigationState);
+    window.addEventListener("pageshow", resetNavigationState);
+    return () => {
+      window.removeEventListener("pagehide", resetNavigationState);
+      window.removeEventListener("pageshow", resetNavigationState);
     };
   }, []);
 
@@ -508,27 +534,25 @@ export function CreditScoreCalculatorPage() {
     if (!showResult) return;
 
     requestAnimationFrame(() => {
-      if (formSectionRef.current) {
-        const top = formSectionRef.current.getBoundingClientRect().top + window.scrollY - 72;
-        window.scrollTo({ top, behavior: "smooth" });
-      }
+      scrollToResultStack();
     });
-  }, [showResult]);
+  }, [scrollToResultStack, showResult]);
 
   useEffect(() => {
     if (!resultRevealed) return;
     const params = new URLSearchParams(window.location.search);
     params.set("result", "1");
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [resultRevealed]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.history.replaceState(null, "", `?${params.toString()}`);
+  }, [resultRevealed]);
 
   const editDetails = () => {
     setResultRevealed(false);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("result");
+    const query = params.toString();
+    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
     requestAnimationFrame(() => {
-      if (formSectionRef.current) {
-        const top = formSectionRef.current.getBoundingClientRect().top + window.scrollY - 72;
-        window.scrollTo({ top, behavior: "smooth" });
-      }
+      scrollToResultStack();
     });
   };
 
@@ -726,7 +750,11 @@ export function CreditScoreCalculatorPage() {
                 onEdit={editDetails}
                 onContinue={() => {
                   setIsNavigating(true);
-                  setTimeout(() => window.location.assign(applicationUrl), 1600);
+                  if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+                  navigationTimerRef.current = setTimeout(() => {
+                    navigationTimerRef.current = null;
+                    window.location.assign(applicationUrl);
+                  }, 1600);
                 }}
               />
             ) : (
