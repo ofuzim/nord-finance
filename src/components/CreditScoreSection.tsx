@@ -5,9 +5,9 @@ import { NordCreditScoreWidget } from "./NordCreditScoreWidget";
 
 const tiers = [
   { label: "Access", range: "< 700", rate: "28%+", color: "#22c55e" },
-  { label: "Core", range: "700 – 800", rate: "22% p.a.", color: "#C39529" },
+  { label: "Core", range: "700 – 800", rate: "22% p.a.", color: "#38bdf8" },
   { label: "Premium", range: "800 – 850", rate: "18% avg.", color: "#f97316" },
-  { label: "Private Bridge", range: "850+", rate: "9% from", color: "#ef4444" },
+  { label: "Private Bridge", range: "850+", rate: "9% from", color: "#a855f7" },
 ];
 
 const factors = [

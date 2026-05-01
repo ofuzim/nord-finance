@@ -21,7 +21,7 @@ const tiers = [
   {
     name: "Core",
     badge: "CORE TIER",
-    color: "#C39529",
+    color: "#38bdf8",
     rate: "22%",
     rateNote: "per annum",
     score: "700 – 800",
@@ -52,11 +52,11 @@ const tiers = [
   {
     name: "Private Bridge",
     badge: "PRIVATE BRIDGE",
-    color: "#ef4444",
+    color: "#a855f7",
     rate: "9%",
     rateNote: "from per annum",
     score: "850+",
-    desc: "Bespoke financing for high-net-worth individuals with full portfolio access.",
+    desc: "Bespoke financing for strong credit profiles with full portfolio access.",
     features: [
       "Dedicated relationship manager",
       "Flexible tenure up to 48mo",

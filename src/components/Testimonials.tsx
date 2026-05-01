@@ -27,7 +27,7 @@ const testimonials = [
   },
   {
     quote:
-      "As an HNI client, I need discretion and speed. Nord Finance delivered both. The Private Bridge product gave me terms that actually made financial sense. My Bentayga was the easiest large purchase I've made.",
+      "As a strong credit profile client, I need discretion and speed. Nord Finance delivered both. The Private Bridge product gave me terms that actually made financial sense. My Bentayga was the easiest large purchase I've made.",
     name: "Emeka Nwosu",
     location: "Port Harcourt, Nigeria",
     car: "Bentley Bentayga",

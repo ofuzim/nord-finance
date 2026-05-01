@@ -149,7 +149,7 @@ export const creditScoreSelectOptions = {
   activeBankAccounts: [
     { label: "3+ across banks", value: 100 },
     { label: "2 accounts", value: 80 },
-    { label: "1 (Tier 1 bank)", value: 60 },
+    { label: "1 (Commercial bank)", value: 60 },
     { label: "1 (Microfinance)", value: 35 },
   ],
   transactionFrequency: [
@@ -273,10 +273,10 @@ export function getCreditScoreTier(score: number): CreditScoreTier {
     return { name: "Private Bridge", color: "#9ca3af", rate: "from 9% p.a.", maxTenure: "6 months", minDownPayment: "50%", note: "You're in our highest tier — reserved for top-performing financial profiles" };
   }
   if (score >= 800) {
-    return { name: "Premium Tier", color: "#ef4444", rate: "18% p.a.", maxTenure: "12 months", minDownPayment: "40%", note: "You have a strong financial profile with a low risk of default" };
+    return { name: "Premium Tier", color: "#a855f7", rate: "18% p.a.", maxTenure: "12 months", minDownPayment: "40%", note: "You have a strong financial profile with a low risk of default" };
   }
   if (score >= 700) {
-    return { name: "Core Tier", color: "#EAB308", rate: "22% p.a.", maxTenure: "12–24 months", minDownPayment: "30%", note: "You have a solid credit profile and good repayment history" };
+    return { name: "Core Tier", color: "#38bdf8", rate: "22% p.a.", maxTenure: "12–24 months", minDownPayment: "30%", note: "You have a solid credit profile and good repayment history" };
   }
   return { name: "Access Tier", color: "#22c55e", rate: "28%+ p.a.", maxTenure: "12–48 months", minDownPayment: "30%", note: "You meet our financing criteria and qualify for vehicle credit" };
 }
@@ -290,7 +290,7 @@ export function calculateCreditScore({
   const selectedAverage =
     creditScoreFieldKeys.reduce((sum, key) => sum + (values[key] ?? 0), 0) / creditScoreFieldKeys.length;
 
-  const incomeBoost = Math.min(monthlyIncome / 10000000, 1) * 46;
+  const incomeBoost = Math.min(monthlyIncome / 100000000, 1) * 46;
   const obligationPenalty = Math.min(obligations / 5000000, 1) * 34;
   const downPaymentBoost = Math.min(downPayment / 70, 1) * 54;
   const raw = 520 + selectedAverage * 3.2 + incomeBoost + downPaymentBoost - obligationPenalty;

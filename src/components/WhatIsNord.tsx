@@ -43,7 +43,7 @@ const tiers = [
   {
     badge: "CORE",
     title: "Core Tier",
-    color: "#EAB308",
+    color: "#38bdf8",
     rate: "22%",
     rateNote: "Per annum",
     score: "700 – 800",
@@ -78,7 +78,7 @@ const tiers = [
   {
     badge: "PREMIUM",
     title: "Premium Tier",
-    color: "#ef4444",
+    color: "#a855f7",
     rate: "18%",
     rateNote: "Per annum",
     score: "800 – 850",
@@ -113,7 +113,7 @@ const tiers = [
   },
   {
     badge: "PRIVATE BRIDGE",
-    title: "HNI Tier",
+    title: "Prime Tier",
     color: "#9ca3af",
     rate: "9%",
     rateNote: "Per annum",
@@ -122,7 +122,7 @@ const tiers = [
       "6-month tenure only",
       "50% down payment",
       "Liquidity preservation",
-      "High-net-worth individuals",
+      "Strong credit profile",
       "Fastest cycle time",
     ],
     breakdown: [
@@ -130,19 +130,19 @@ const tiers = [
       { label: "Tenure", value: "6 months only" },
       { label: "Down Payment", value: "50% minimum" },
       { label: "Credit Score", value: "850+" },
-      { label: "Target Client", value: "High-net-worth individuals" },
+      { label: "Target Client", value: "Strong credit profile" },
     ],
     benefits: [
       "Nigeria's lowest vehicle financing rate — from 9% annualized",
       "Designed for liquidity preservation — keep your capital working",
       "Fastest cycle time across all Nord tiers",
-      "Exclusive product reserved for verified HNI clients",
+      "Exclusive product reserved for verified strong credit profile clients",
     ],
     requirements: [
       "Perfect Nord Credit Score required",
       "Nord Credit Score of 850 or above",
       "Minimum 50% down payment",
-      "Verified high-net-worth status",
+      "Verified strong credit profile",
       "Significant asset base or verifiable wealth documentation",
       "Full KYC and enhanced due diligence",
     ],

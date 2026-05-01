@@ -490,7 +490,7 @@ export function CreditScoreCalculatorPage() {
 
     const headerOffset = window.matchMedia("(max-width: 700px)").matches ? 84 : 128;
     const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
-    window.scrollTo({ top, behavior: "smooth" });
+    window.scrollTo({ top, behavior: "auto" });
   }, []);
 
   const revealResult = () => {
@@ -810,13 +810,13 @@ export function CreditScoreCalculatorPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
                       <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
                       <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{incomeDisplay}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦10M+</span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦100M+</span>
                     </div>
                     <input
                       ref={incomeInputRef}
                       type="range"
                       min={0}
-                      max={10000000}
+                      max={100000000}
                       step={250000}
                       defaultValue={0}
                       className="score-range"

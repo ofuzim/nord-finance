@@ -456,8 +456,6 @@ function ApplicationSuccessCarLoader() {
           inset: 0;
           width: 100%;
           height: 100%;
-          animation: success-loader-bob 0.42s ease-in-out infinite alternate;
-          will-change: transform;
         }
 
         .success-loader-car svg {
@@ -497,11 +495,6 @@ function ApplicationSuccessCarLoader() {
           20% { opacity: 1; }
           80% { opacity: 1; }
           100% { transform: translateX(-220%); opacity: 0; }
-        }
-
-        @keyframes success-loader-bob {
-          0% { transform: translate3d(0, 0, 0) rotate(-0.15deg); }
-          100% { transform: translate3d(0, -1.1%, 0) rotate(0.15deg); }
         }
 
         .success-loader-car .wheel {
@@ -549,6 +542,8 @@ function StepNav({
   setStep,
   submit,
   canProceed,
+  isContinuing = false,
+  isSubmitting = false,
   onBack,
   onCancel,
 }: {
@@ -556,14 +551,19 @@ function StepNav({
   setStep: (step: number) => void;
   submit?: () => void;
   canProceed: boolean;
+  isContinuing?: boolean;
+  isSubmitting?: boolean;
   onBack: () => void;
   onCancel: () => void;
 }) {
-  const disabled = !canProceed;
+  const isFinalStep = currentStep === 4;
+  const isLoading = isFinalStep ? isSubmitting : isContinuing;
+  const disabled = !canProceed || isLoading;
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, marginTop: 44 }} className="application-actions">
       <button
         type="button"
+        disabled={isLoading}
         onClick={currentStep === 1 ? onCancel : onBack}
         style={{
           border: "1px solid rgba(255,255,255,0.18)",
@@ -575,7 +575,8 @@ function StepNav({
           fontWeight: 700,
           letterSpacing: "0.15em",
           textTransform: "uppercase",
-          cursor: "pointer",
+          cursor: isLoading ? "not-allowed" : "pointer",
+          opacity: isLoading ? 0.5 : 1,
         }}
       >
         {currentStep === 1 ? "Cancel" : "Back"}
@@ -583,11 +584,11 @@ function StepNav({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => (currentStep === 4 ? submit?.() : setStep(currentStep + 1))}
+        onClick={() => (isFinalStep ? submit?.() : setStep(currentStep + 1))}
         style={{
-          border: currentStep === 4 ? "none" : "1px solid #C39529",
-          backgroundColor: currentStep === 4 ? "#C39529" : "transparent",
-          color: currentStep === 4 ? "#000" : "#C39529",
+          border: isFinalStep ? "none" : "1px solid #C39529",
+          backgroundColor: isFinalStep ? "#C39529" : "transparent",
+          color: isFinalStep ? "#000" : "#C39529",
           borderRadius: 100,
           padding: "14px 36px",
           fontSize: 11,
@@ -597,9 +598,15 @@ function StepNav({
           cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.35 : 1,
           transition: "opacity 0.2s ease",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          minWidth: 146,
         }}
       >
-        {currentStep === 4 ? "Submit Application" : "Continue"}
+        {isLoading && <span className="application-button-loader" aria-hidden="true" />}
+        {isLoading ? (isFinalStep ? "Submitting" : "Loading") : isFinalStep ? "Submit Application" : "Continue"}
       </button>
     </div>
   );
@@ -624,6 +631,7 @@ export function ApplicationFormPage() {
   const [currentStep, setCurrentStepState] = useState(initialStep);
   const [success, setSuccess] = useState(initialSuccess);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [consent, setConsent] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -631,6 +639,7 @@ export function ApplicationFormPage() {
   const applicationUrlRef = useRef("");
   const currentStepRef = useRef(initialStep);
   const successRef = useRef(initialSuccess);
+  const continueTimerRef = useRef<number | null>(null);
   const [values, setValues] = useState<FormValues>({
     firstName: carriedFirstName,
     lastName: carriedLastName,
@@ -654,18 +663,18 @@ export function ApplicationFormPage() {
     currentStepRef.current = currentStep;
   }, [currentStep]);
 
-  const scrollToFormSection = useCallback(() => {
+  const scrollToFormSection = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (formRef.current) {
       const headerOffset = 72;
       const top = formRef.current.getBoundingClientRect().top + window.scrollY - headerOffset;
-      window.scrollTo({ top, behavior: "smooth" });
+      window.scrollTo({ top, behavior });
     }
   }, []);
 
-  const scheduleFormScroll = useCallback(() => {
+  const scheduleFormScroll = useCallback((behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
-      scrollToFormSection();
-      window.setTimeout(scrollToFormSection, 80);
+      scrollToFormSection(behavior);
+      window.setTimeout(() => scrollToFormSection(behavior), 80);
     });
   }, [scrollToFormSection]);
 
@@ -711,7 +720,7 @@ export function ApplicationFormPage() {
     };
   }, [scheduleFormScroll]);
 
-  const setStep = (step: number) => {
+  const setStep = (step: number, scrollBehavior: ScrollBehavior = "smooth") => {
     setSuccess(false);
     setCurrentStepState(step);
     const params = new URLSearchParams(searchParams.toString());
@@ -719,14 +728,38 @@ export function ApplicationFormPage() {
     const nextUrl = `?${params.toString()}`;
     applicationUrlRef.current = `${window.location.pathname}${nextUrl}`;
     window.history.pushState(null, "", nextUrl);
-    scheduleFormScroll();
+    scheduleFormScroll(scrollBehavior);
   };
+
+  const continueToStep = (step: number) => {
+    if (isContinuing) return;
+    setIsContinuing(true);
+
+    if (continueTimerRef.current !== null) {
+      window.clearTimeout(continueTimerRef.current);
+    }
+
+    continueTimerRef.current = window.setTimeout(() => {
+      const scrollBehavior = window.matchMedia("(max-width: 960px)").matches ? "auto" : "smooth";
+      setStep(step, scrollBehavior);
+      setIsContinuing(false);
+      continueTimerRef.current = null;
+    }, 420);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (continueTimerRef.current !== null) {
+        window.clearTimeout(continueTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!success) return;
 
     const scrollToPageTop = () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "auto" });
     };
 
     requestAnimationFrame(() => {
@@ -1248,9 +1281,11 @@ export function ApplicationFormPage() {
 
               <StepNav
                 currentStep={currentStep}
-                setStep={setStep}
+                setStep={continueToStep}
                 submit={submitApplication}
                 canProceed={stepIsComplete(currentStep, values, consent)}
+                isContinuing={isContinuing}
+                isSubmitting={isSubmitting}
                 onBack={() => setStep(currentStep - 1)}
                 onCancel={() => setShowCancelModal(true)}
               />
@@ -1330,6 +1365,16 @@ export function ApplicationFormPage() {
         }
         .application-loader {
           animation: applicationSpin 0.9s linear infinite;
+        }
+        .application-button-loader {
+          width: 13px;
+          height: 13px;
+          border-radius: 50%;
+          border: 2px solid currentColor;
+          border-right-color: transparent;
+          display: inline-block;
+          animation: applicationSpin 0.75s linear infinite;
+          flex: 0 0 auto;
         }
         @keyframes applicationSpin {
           to { transform: rotate(360deg); }
