@@ -7,17 +7,17 @@ const steps = [
   {
     number: "01",
     title: "Check Your Score",
-    desc: "Your Nord Credit Score is calculated from your financial profile. See your tier and eligible financing terms upfront.",
+    desc: "Your Nord Credit Score reflects your financial profile. See your tier and applicable financing terms.",
   },
   {
     number: "02",
-    title: "Choose Your Vehicle",
-    desc: "Browse the Nord Automobiles portfolio. Select the vehicle that matches your aspirations and your tier.",
+    title: "Apply in Minutes",
+    desc: "Submit your application online. Upload KYC documents. Approval in as little as 24 hours.",
   },
   {
     number: "03",
-    title: "Apply in Minutes",
-    desc: "Complete your structured application online. Upload your KYC documents. Approval delivered in as little as 24 hours.",
+    title: "Choose Your Vehicle",
+    desc: "Browse the Nord Automobiles portfolio. Select the vehicle that matches your aspirations and your tier.",
   },
   {
     number: "04",
