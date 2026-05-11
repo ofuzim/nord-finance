@@ -13,6 +13,7 @@ import { vehicleGroups } from "@/lib/vehicleCatalog";
 import { getDocumentUploadUrl, saveDraftApplication, finalizeApplication, getDraftApplication, sendApplicationConfirmationEmail } from "@/app/actions/application";
 import { getCreditScoreById } from "@/app/actions/credit-score";
 import { defaultCreditScoreTiers, getCreditScoreTier, type CreditScoreTierConfig } from "@/lib/creditScoreModel";
+import { defaultKycConfig, getKycGroupItems, isKycRequired, kycFieldGroups, type KycConfig } from "@/lib/kycConfig";
 
 type FormValues = Record<string, string>;
 type UploadedFile = { storagePath: string; fileName: string; fileSize: number; mimeType: string };
@@ -20,15 +21,20 @@ type UploadValues = Record<string, UploadedFile>;
 
 const BYPASS_COMPLETION = process.env.NEXT_PUBLIC_BYPASS_COMPLETION === "true";
 
-function stepIsComplete(step: number, values: FormValues, consent: boolean): boolean {
+function stepIsComplete(step: number, values: FormValues, consent: boolean, kycConfig: KycConfig, uploads: UploadValues = {}): boolean {
   if (BYPASS_COMPLETION) return true;
   const v = (k: string) => !!values[k]?.trim();
-  if (step === 1) return [
-    "title", "firstName", "lastName", "gender", "dateOfBirth", "maritalStatus",
-    "stateOfOrigin", "lgaOfOrigin", "phoneNumber", "emailAddress", "homeAddress",
-    "stateOfResidence", "lgaOfResidence", "residentialStatus", "occupation", "employmentType",
-  ].every(v);
-  if (step === 2) return ["idType", "idNumber", "nin", "bvn"].every(v);
+  const required = (keys: string[]) => keys.filter((key) => isKycRequired(kycConfig, key));
+  if (step === 1) return required([
+    "title", "firstName", "lastName", "otherNames", "gender", "dateOfBirth", "maritalStatus", "numChildren",
+    "stateOfOrigin", "lgaOfOrigin", "phoneNumber", "emailAddress", "homeAddress", "landmark",
+    "stateOfResidence", "lgaOfResidence", "residentialStatus", "occupation", "employerName", "officeAddress", "employmentType",
+  ]).every(v);
+  if (step === 2) {
+    const fieldsOk = required(["idType", "idNumber", "idExpiry", "nin", "bvn"]).every(v);
+    const docsOk = required(["governmentId", "passport", "bankStatement", "payslip", "residence"]).every((key) => Boolean(uploads[key]));
+    return fieldsOk && docsOk;
+  }
   if (step === 3) return v("vehicleModel");
   if (step === 4) return consent;
   return true;
@@ -48,6 +54,16 @@ const states = [
   "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau",
   "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
+
+const kycGroupByTitle = Object.fromEntries(kycFieldGroups.map((group) => [group.title, group]));
+
+const documentUploadMeta: Record<string, { title: string; subtitle: string }> = {
+  governmentId: { title: "Government Issued ID", subtitle: "Passport, NIN card, Driver's Licence or PVC" },
+  passport: { title: "Passport Photograph", subtitle: "Recent clear photo, white background preferred" },
+  bankStatement: { title: "Bank Statement", subtitle: "Most recent 12 months" },
+  payslip: { title: "Payslip", subtitle: "Recent salary payslip" },
+  residence: { title: "Proof of Residence", subtitle: "Current utility bill or residence evidence" },
+};
 
 const categoryDescriptions: Record<string, string> = {
   "Sedans": "Passenger cars and sport coupés — comfortable, agile, and ideal for daily driving.",
@@ -271,6 +287,7 @@ function UploadBox({
   subtitle,
   name,
   uploads,
+  required,
   onUploaded,
   onUploadStart,
   onUploadEnd,
@@ -279,6 +296,7 @@ function UploadBox({
   subtitle: string;
   name: string;
   uploads: UploadValues;
+  required?: boolean;
   onUploaded: (name: string, file: UploadedFile) => void;
   onUploadStart: () => void;
   onUploadEnd: () => void;
@@ -382,7 +400,7 @@ function UploadBox({
           </svg>
         )}
       </div>
-      <p style={{ color: "white", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title}</p>
+      <p style={{ color: "white", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title} {required && <span style={{ color: "#C39529" }}>*</span>}</p>
       <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, lineHeight: 1.6 }}>{subtitle}</p>
       {isUploading && <p style={{ color: "#C39529", fontSize: 12, marginTop: 10 }}>Uploading…</p>}
       {isDone && <p style={{ color: "#22c55e", fontSize: 12, marginTop: 10 }}>{displayName}</p>}
@@ -686,7 +704,7 @@ function StepNav({
   );
 }
 
-export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers?: CreditScoreTierConfig[] }) {
+export function ApplicationFormPage({ tiers = defaultCreditScoreTiers, kycConfig = defaultKycConfig }: { tiers?: CreditScoreTierConfig[]; kycConfig?: KycConfig }) {
   const searchParams = useSearchParams();
   const carriedScore = searchParams.get("score");
   const carriedTier = searchParams.get("tier");
@@ -698,6 +716,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
   const carriedDownPayment = searchParams.get("downPayment") ?? "";
   const carriedScoreId = searchParams.get("scoreId") ?? "";
   const resumeId = searchParams.get("id") ?? "";
+  const carriedReferenceNumber = searchParams.get("reference") ?? "";
 
   const formRef = React.useRef<HTMLDivElement>(null);
 
@@ -710,7 +729,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
   const [isContinuing, setIsContinuing] = useState(false);
   const [consent, setConsent] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
+  const [referenceNumber, setReferenceNumber] = useState<string | null>(carriedReferenceNumber || null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadValues>({});
@@ -735,17 +754,54 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
     monthlyIncome: carriedMonthlyIncome,
     downPayment: carriedDownPayment,
   });
+  const req = useCallback((key: string) => isKycRequired(kycConfig, key), [kycConfig]);
+  const kycItemsFor = useCallback((title: string) => {
+    const group = kycGroupByTitle[title];
+    return group ? getKycGroupItems(group, kycConfig).map(([key]) => key) : [];
+  }, [kycConfig]);
+  const hasCreditScoreSummary = Boolean(carriedScoreId || displayScore || displayTier);
 
   const creditScoreBackUrl = carriedScoreId
     ? `/credit-score/results/${carriedScoreId}`
     : "/credit-score?result=1";
+
+  const getSuccessBackUrl = useCallback(() => {
+    if (carriedScoreId) return `/credit-score/results/${carriedScoreId}`;
+    try {
+      return sessionStorage.getItem("nord_application_success_back_url") || creditScoreBackUrl;
+    } catch {
+      return creditScoreBackUrl;
+    }
+  }, [carriedScoreId, creditScoreBackUrl]);
+
+  useEffect(() => {
+    if (!carriedScoreId) return;
+    try {
+      sessionStorage.setItem("nord_application_success_back_url", `/credit-score/results/${carriedScoreId}`);
+    } catch {}
+  }, [carriedScoreId]);
 
   // Load draft from DB when resuming via ?id=
   useEffect(() => {
     if (!resumeId) return;
     getDraftApplication(resumeId).then((result) => {
       if ("error" in result) return;
+      if (result.referenceNumber && !referenceNumber) {
+        setReferenceNumber(result.referenceNumber);
+      }
+      if (result.status !== "draft") {
+        setSuccess(true);
+        const params = new URLSearchParams();
+        params.set("id", resumeId);
+        params.set("step", "success");
+        applicationUrlRef.current = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState(null, "", `?${params.toString()}`);
+        return;
+      }
       setValues((current) => ({ ...current, ...result.fields }));
+      if (!stepParam && result.step) {
+        setCurrentStepState(Math.min(Math.max(result.step, 1), steps.length));
+      }
       if (result.fields.vehicleModel) {
         const group = vehicleGroups.find((g) => g.models.includes(result.fields.vehicleModel));
         if (group) setSelectedCategory(group.category);
@@ -817,16 +873,15 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
         const params = new URLSearchParams(window.location.search);
         const stepParamFromUrl = params.get("step");
 
-        // Always restore success state when URL says success — must come before successRef check
-        if (stepParamFromUrl === "success") {
-          setSuccess(true);
-          applicationUrlRef.current = `${window.location.pathname}${window.location.search}`;
+        // Once submitted, browser back should leave the confirmation page.
+        if (successRef.current) {
+          window.location.assign(getSuccessBackUrl());
           return;
         }
 
-        // On success, going back to a numbered step means application is done — return to score page
-        if (successRef.current) {
-          window.location.assign(creditScoreBackUrl);
+        if (stepParamFromUrl === "success") {
+          setSuccess(true);
+          applicationUrlRef.current = `${window.location.pathname}${window.location.search}`;
           return;
         }
 
@@ -849,7 +904,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
 
       // Outside /application entirely
       if (successRef.current) {
-        window.location.assign(creditScoreBackUrl);
+        window.location.assign(getSuccessBackUrl());
         return;
       }
 
@@ -863,7 +918,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
     return () => {
       window.removeEventListener("popstate", handleBrowserBack);
     };
-  }, [scheduleFormScroll]);
+  }, [getSuccessBackUrl, scheduleFormScroll]);
 
   const setStep = (step: number, scrollBehavior: ScrollBehavior = "smooth", appId?: string) => {
     setSuccess(false);
@@ -886,7 +941,12 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
 
     // Save draft in parallel with the animation delay
     const [saveResult] = await Promise.all([
-      saveDraftApplication({ values, applicationId }).catch(() => null),
+      saveDraftApplication({
+        values,
+        applicationId,
+        creditScoreId: carriedScoreId || null,
+        currentStep: step,
+      }).catch(() => null),
       wait(420),
     ]);
 
@@ -953,7 +1013,12 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
       // Ensure we have a draft application record (should already exist from step advances)
       let appId = applicationId;
       if (!appId) {
-        const draft = await saveDraftApplication({ values, applicationId: null });
+        const draft = await saveDraftApplication({
+          values,
+          applicationId: null,
+          creditScoreId: carriedScoreId || null,
+          currentStep,
+        });
         if ("error" in draft) {
           setSubmitError("Failed to save application. Please try again.");
           setIsSubmitting(false);
@@ -983,7 +1048,8 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
       setIsSubmitting(false);
       setSuccess(true);
       void sendApplicationConfirmationEmail({ applicationId: appId }).catch(() => null);
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams();
+      params.set("id", appId);
       params.set("step", "success");
       const successUrl = `?${params.toString()}`;
       applicationUrlRef.current = `${window.location.pathname}${successUrl}`;
@@ -992,6 +1058,89 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
       setSubmitError("Something went wrong. Please try again.");
       setIsSubmitting(false);
     }
+  };
+
+  const renderKycField = (key: string) => {
+    switch (key) {
+      case "title":
+        return <SelectField label="Title" name="title" values={values} setValues={setValues} options={["Mr", "Mrs", "Miss", "Ms", "Dr", "Prof", "Engr", "Barr"]} required={req("title")} />;
+      case "firstName":
+        return <TextField label="First Name" name="firstName" values={values} setValues={setValues} placeholder="First name" required={req("firstName")} />;
+      case "lastName":
+        return <TextField label="Last Name" name="lastName" values={values} setValues={setValues} placeholder="Last name" required={req("lastName")} />;
+      case "otherNames":
+        return <TextField label="Other Names" name="otherNames" values={values} setValues={setValues} placeholder="Middle / other names" required={req("otherNames")} />;
+      case "gender":
+        return <RadioGroup label="Gender" name="gender" values={values} setValues={setValues} options={["Male", "Female"]} required={req("gender")} />;
+      case "dateOfBirth":
+        return <TextField label="Date of Birth" name="dateOfBirth" values={values} setValues={setValues} type="date" required={req("dateOfBirth")} />;
+      case "maritalStatus":
+        return <SelectField label="Marital Status" name="maritalStatus" values={values} setValues={setValues} options={["Single", "Married", "Divorced", "Widowed", "Separated"]} required={req("maritalStatus")} />;
+      case "numChildren":
+        return <SelectField label="Number of Children" name="numChildren" values={values} setValues={setValues} options={["0", "1", "2", "3", "4", "5+"]} required={req("numChildren")} />;
+      case "stateOfOrigin":
+        return <SelectField label="State of Origin" name="stateOfOrigin" values={values} setValues={setValues} options={states} required={req("stateOfOrigin")} />;
+      case "lgaOfOrigin":
+        return <TextField label="LGA of Origin" name="lgaOfOrigin" values={values} setValues={setValues} placeholder="Enter LGA of origin" required={req("lgaOfOrigin")} />;
+      case "phoneNumber":
+        return <TextField label="Phone Number" name="phoneNumber" values={values} setValues={setValues} type="tel" placeholder="e.g. 08012345678" required={req("phoneNumber")} />;
+      case "emailAddress":
+        return <TextField label="Email Address" name="emailAddress" values={values} setValues={setValues} type="email" placeholder="your@email.com" required={req("emailAddress")} />;
+      case "homeAddress":
+        return <div className="field-full"><TextField label="Home Address" name="homeAddress" values={values} setValues={setValues} placeholder="Full home address" required={req("homeAddress")} /></div>;
+      case "landmark":
+        return <TextField label="Landmark / Nearest Bus Stop" name="landmark" values={values} setValues={setValues} placeholder="e.g. Opposite GTBank" required={req("landmark")} />;
+      case "stateOfResidence":
+        return <SelectField label="State of Residence" name="stateOfResidence" values={values} setValues={setValues} options={states} required={req("stateOfResidence")} />;
+      case "lgaOfResidence":
+        return <TextField label="LGA of Residence" name="lgaOfResidence" values={values} setValues={setValues} placeholder="Enter your LGA" required={req("lgaOfResidence")} />;
+      case "residentialStatus":
+        return <div className="field-full"><RadioGroup label="Residential Status" name="residentialStatus" values={values} setValues={setValues} options={["Tenant", "Property Owner", "Living with Relative / Parent"]} required={req("residentialStatus")} /></div>;
+      case "occupation":
+        return <TextField label="Occupation" name="occupation" values={values} setValues={setValues} placeholder="Your occupation / job title" required={req("occupation")} />;
+      case "employerName":
+        return <TextField label="Employer / Business Name" name="employerName" values={values} setValues={setValues} placeholder="Company or business name" required={req("employerName")} />;
+      case "officeAddress":
+        return <div className="field-full"><TextField label="Office / Business Address" name="officeAddress" values={values} setValues={setValues} placeholder="Office or business address" required={req("officeAddress")} /></div>;
+      case "employmentType":
+        return <div className="field-full"><RadioGroup label="Employment Type" name="employmentType" values={values} setValues={setValues} options={["Full Time", "Part Time", "Self Employed", "Retired"]} required={req("employmentType")} /></div>;
+      case "idType":
+        return <SelectField label="ID Type" name="idType" values={values} setValues={setValues} options={["National ID Card (NIMC)", "International Passport", "Driver's Licence", "Voter's Card (PVC)"]} required={req("idType")} />;
+      case "idNumber":
+        return <TextField label="ID Card Number" name="idNumber" values={values} setValues={setValues} placeholder="Enter ID number" required={req("idNumber")} />;
+      case "idExpiry":
+        return <TextField label="ID Expiry Date" name="idExpiry" values={values} setValues={setValues} type="date" required={req("idExpiry")} />;
+      case "nin":
+        return <TextField label="NIN" name="nin" values={values} setValues={setValues} placeholder="11-digit NIN" required={req("nin")} />;
+      case "bvn":
+        return (
+          <div className="field-full">
+            <TextField label="BVN" name="bvn" values={values} setValues={setValues} placeholder="11-digit BVN" required={req("bvn")} />
+            <p style={{ color: "rgba(255,255,255,0.38)", fontSize: 12, lineHeight: 1.7, borderLeft: "2px solid #C39529", paddingLeft: 14, marginTop: 10 }}>
+              Your BVN is used solely for identity verification and credit assessment.
+            </p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderKycUpload = (fieldName: string) => {
+    const meta = documentUploadMeta[fieldName];
+    if (!meta) return null;
+    return (
+      <UploadBox
+        title={meta.title}
+        subtitle={meta.subtitle}
+        name={fieldName}
+        uploads={uploads}
+        required={req(fieldName)}
+        onUploaded={(n, f) => setUploads(u => ({ ...u, [n]: f }))}
+        onUploadStart={() => setActiveUploads(c => c + 1)}
+        onUploadEnd={() => setActiveUploads(c => Math.max(0, c - 1))}
+      />
+    );
   };
 
   return (
@@ -1107,7 +1256,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                 </p>
               </div>
               <div style={{ minWidth: 260 }}>
-                {(displayScore || displayTier) && (
+                {hasCreditScoreSummary && (
                   <div
                     style={{
                       border: "1px solid rgba(255,255,255,0.14)",
@@ -1129,9 +1278,19 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                     <p style={{ color: "#C39529", fontWeight: 800, fontSize: 48, lineHeight: 1, letterSpacing: "-0.03em", marginBottom: 8 }}>
                       {displayScore ?? "--"}
                     </p>
-                    {displayTier && (
-                      <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                        {displayTier}
+                    {(displayTier || carriedScoreId) && (
+                      <p
+                        style={{
+                          color: "rgba(255,255,255,0.55)",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          letterSpacing: "0.14em",
+                          textTransform: "uppercase",
+                          visibility: displayTier ? "visible" : "hidden",
+                        }}
+                        aria-hidden={!displayTier}
+                      >
+                        {displayTier ?? "Access Tier"}
                       </p>
                     )}
                   </div>
@@ -1235,38 +1394,20 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                 <>
                   <SectionLabel>Identity</SectionLabel>
                   <div className="application-grid">
-                    <SelectField label="Title" name="title" values={values} setValues={setValues} options={["Mr", "Mrs", "Miss", "Ms", "Dr", "Prof", "Engr", "Barr"]} required />
-                    <TextField label="First Name" name="firstName" values={values} setValues={setValues} placeholder="First name" required />
-                    <TextField label="Last Name" name="lastName" values={values} setValues={setValues} placeholder="Last name" required />
-                    <TextField label="Other Names" name="otherNames" values={values} setValues={setValues} placeholder="Middle / other names" />
-                    <RadioGroup label="Gender" name="gender" values={values} setValues={setValues} options={["Male", "Female"]} required />
-                    <TextField label="Date of Birth" name="dateOfBirth" values={values} setValues={setValues} type="date" required />
-                    <SelectField label="Marital Status" name="maritalStatus" values={values} setValues={setValues} options={["Single", "Married", "Divorced", "Widowed", "Separated"]} required />
-                    <SelectField label="Number of Children" name="numChildren" values={values} setValues={setValues} options={["0", "1", "2", "3", "4", "5+"]} />
-                    <SelectField label="State of Origin" name="stateOfOrigin" values={values} setValues={setValues} options={states} required />
-                    <TextField label="LGA of Origin" name="lgaOfOrigin" values={values} setValues={setValues} placeholder="Enter LGA of origin" required />
+                    {kycItemsFor("Identity").map((key) => <React.Fragment key={key}>{renderKycField(key)}</React.Fragment>)}
                   </div>
 
                   <div style={{ marginTop: 52 }}>
                     <SectionLabel>Contact Details</SectionLabel>
                     <div className="application-grid">
-                      <TextField label="Phone Number" name="phoneNumber" values={values} setValues={setValues} type="tel" placeholder="e.g. 08012345678" required />
-                      <TextField label="Email Address" name="emailAddress" values={values} setValues={setValues} type="email" placeholder="your@email.com" required />
-                      <div className="field-full"><TextField label="Home Address" name="homeAddress" values={values} setValues={setValues} placeholder="Full home address" required /></div>
-                      <TextField label="Landmark / Nearest Bus Stop" name="landmark" values={values} setValues={setValues} placeholder="e.g. Opposite GTBank" />
-                      <SelectField label="State of Residence" name="stateOfResidence" values={values} setValues={setValues} options={states} required />
-                      <TextField label="LGA of Residence" name="lgaOfResidence" values={values} setValues={setValues} placeholder="Enter your LGA" required />
-                      <div className="field-full"><RadioGroup label="Residential Status" name="residentialStatus" values={values} setValues={setValues} options={["Tenant", "Property Owner", "Living with Relative / Parent"]} required /></div>
+                      {kycItemsFor("Contact Details").map((key) => <React.Fragment key={key}>{renderKycField(key)}</React.Fragment>)}
                     </div>
                   </div>
 
                   <div style={{ marginTop: 52 }}>
                     <SectionLabel>Employment & Business</SectionLabel>
                     <div className="application-grid">
-                      <TextField label="Occupation" name="occupation" values={values} setValues={setValues} placeholder="Your occupation / job title" required />
-                      <TextField label="Employer / Business Name" name="employerName" values={values} setValues={setValues} placeholder="Company or business name" />
-                      <div className="field-full"><TextField label="Office / Business Address" name="officeAddress" values={values} setValues={setValues} placeholder="Office or business address" /></div>
-                      <div className="field-full"><RadioGroup label="Employment Type" name="employmentType" values={values} setValues={setValues} options={["Full Time", "Part Time", "Self Employed", "Retired"]} required /></div>
+                      {kycItemsFor("Employment & Business").map((key) => <React.Fragment key={key}>{renderKycField(key)}</React.Fragment>)}
                     </div>
                   </div>
                 </>
@@ -1276,16 +1417,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                 <>
                   <SectionLabel>Government ID</SectionLabel>
                   <div className="application-grid">
-                    <SelectField label="ID Type" name="idType" values={values} setValues={setValues} options={["National ID Card (NIMC)", "International Passport", "Driver's Licence", "Voter's Card (PVC)"]} required />
-                    <TextField label="ID Card Number" name="idNumber" values={values} setValues={setValues} placeholder="Enter ID number" required />
-                    <TextField label="ID Expiry Date" name="idExpiry" values={values} setValues={setValues} type="date" />
-                    <TextField label="NIN" name="nin" values={values} setValues={setValues} placeholder="11-digit NIN" required />
-                    <div className="field-full">
-                      <TextField label="BVN" name="bvn" values={values} setValues={setValues} placeholder="11-digit BVN" required />
-                      <p style={{ color: "rgba(255,255,255,0.38)", fontSize: 12, lineHeight: 1.7, borderLeft: "2px solid #C39529", paddingLeft: 14, marginTop: 10 }}>
-                        Your BVN is used solely for identity verification and credit assessment.
-                      </p>
-                    </div>
+                    {kycItemsFor("Government ID").map((key) => <React.Fragment key={key}>{renderKycField(key)}</React.Fragment>)}
                   </div>
                   <div style={{ marginTop: 52 }}>
                     <SectionLabel>Supporting Documents</SectionLabel>
@@ -1296,27 +1428,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                       </p>
                     )}
                     <div className="upload-grid">
-                      {(["governmentId", "passport", "bankStatement", "payslip", "residence"] as const).map((fieldName) => {
-                        const meta: Record<string, { title: string; subtitle: string }> = {
-                          governmentId: { title: "Government Issued ID", subtitle: "Passport, NIN card, Driver's Licence or PVC" },
-                          passport: { title: "Passport Photograph", subtitle: "Recent clear photo, white background preferred" },
-                          bankStatement: { title: "Bank Statement", subtitle: "Most recent 12 months" },
-                          payslip: { title: "Payslip", subtitle: "Recent salary payslip" },
-                          residence: { title: "Proof of Residence", subtitle: "Current utility bill or residence evidence" },
-                        };
-                        return (
-                          <UploadBox
-                            key={fieldName}
-                            title={meta[fieldName].title}
-                            subtitle={meta[fieldName].subtitle}
-                            name={fieldName}
-                            uploads={uploads}
-                            onUploaded={(n, f) => setUploads(u => ({ ...u, [n]: f }))}
-                            onUploadStart={() => setActiveUploads(c => c + 1)}
-                            onUploadEnd={() => setActiveUploads(c => Math.max(0, c - 1))}
-                          />
-                        );
-                      })}
+                      {kycItemsFor("Supporting Documents").map((fieldName) => <React.Fragment key={fieldName}>{renderKycUpload(fieldName)}</React.Fragment>)}
                     </div>
                   </div>
                 </>
@@ -1546,7 +1658,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers
                 currentStep={currentStep}
                 setStep={continueToStep}
                 submit={submitApplication}
-                canProceed={stepIsComplete(currentStep, values, consent) && activeUploads === 0}
+                canProceed={stepIsComplete(currentStep, values, consent, kycConfig, uploads) && activeUploads === 0}
                 isContinuing={isContinuing}
                 isSubmitting={isSubmitting}
                 onBack={() => setStep(currentStep - 1)}

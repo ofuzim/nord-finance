@@ -25,11 +25,15 @@ export default async function CreditScoreResultPage({
 
   const { data, error } = await service
     .from('credit_scores')
-    .select('monthly_income, monthly_obligations, down_payment_percentage, form_responses')
+    .select('monthly_income, monthly_obligations, down_payment_percentage, form_responses, applications(id, reference_number, status, current_step)')
     .eq('id', scoreId)
     .maybeSingle()
 
   if (error || !data) notFound()
+
+  const linkedApplication = Array.isArray(data.applications)
+    ? data.applications[0]
+    : data.applications
 
   const initialResult: InitialCreditScoreResult = {
     scoreId,
@@ -37,6 +41,14 @@ export default async function CreditScoreResultPage({
     monthlyIncome: Number(data.monthly_income ?? 0),
     obligations: Number(data.monthly_obligations ?? 0),
     downPayment: Number(data.down_payment_percentage ?? 30),
+    application: linkedApplication
+      ? {
+          id: linkedApplication.id,
+          status: linkedApplication.status,
+          referenceNumber: linkedApplication.reference_number,
+          currentStep: linkedApplication.current_step ?? 1,
+        }
+      : null,
   }
 
   return (

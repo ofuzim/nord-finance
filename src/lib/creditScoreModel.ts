@@ -8,6 +8,7 @@ export type CreditScoreFormOption = CreditScoreOption;
 export type CreditScoreFormField = {
   key: string;
   label: string;
+  type?: 'select' | 'radio';
   options: CreditScoreFormOption[];
 };
 
@@ -20,6 +21,7 @@ export type CreditScoreSliderField = {
   max: number;
   step: number;
   defaultValue: number;
+  scoreImpact: number;
   minLabel: string;
   maxLabel: string;
   format: "currency" | "percent" | "number";
@@ -27,27 +29,32 @@ export type CreditScoreSliderField = {
 
 export type CreditScoreSelectField = CreditScoreFormField;
 
+export type CreditScoreFormItem =
+  | ({ itemType: 'field' } & CreditScoreFormField)
+  | ({ itemType: 'slider' } & CreditScoreSliderField)
+
 export type CreditScoreFormSection = {
   id: string;
   title: string;
   weight: string;
-  sliders?: CreditScoreSliderField[];
-  fields: CreditScoreFormField[];
+  items: CreditScoreFormItem[];
 };
 
 export type CreditScoreSection = CreditScoreFormSection;
+
+export function getSectionFields(section: CreditScoreFormSection): CreditScoreFormField[] {
+  return section.items.filter((item): item is { itemType: 'field' } & CreditScoreFormField => item.itemType === 'field');
+}
+
+export function getSectionSliders(section: CreditScoreFormSection): CreditScoreSliderField[] {
+  return section.items.filter((item): item is { itemType: 'slider' } & CreditScoreSliderField => item.itemType === 'slider');
+}
 
 export type CreditScoreFormConfig = CreditScoreFormSection[];
 
 export type CreditScoreFormulaConfig = {
   base_score: number;
   multiplier: number;
-  income_boost_max: number;
-  income_boost_divisor: number;
-  down_payment_boost_max: number;
-  down_payment_boost_divisor: number;
-  obligation_penalty_max: number;
-  obligation_penalty_divisor: number;
   min_score: number;
   max_score: number;
 };
@@ -91,15 +98,9 @@ export type CreditScoreSignal = {
 };
 
 export const defaultCreditScoreFormula: CreditScoreFormulaConfig = {
-  base_score: 520,
+  base_score: 500,
   multiplier: 3.2,
-  income_boost_max: 46,
-  income_boost_divisor: 100000000,
-  down_payment_boost_max: 54,
-  down_payment_boost_divisor: 70,
-  obligation_penalty_max: 34,
-  obligation_penalty_divisor: 5000000,
-  min_score: 520,
+  min_score: 500,
   max_score: 910,
 };
 
@@ -237,101 +238,65 @@ export const creditScoreSections: CreditScoreSection[] = [
     id: "income_stability",
     title: "Income Stability",
     weight: "25%",
-    sliders: [
-      {
-        key: "monthlyIncome",
-        label: "Monthly Net Income (₦)",
-        min: 0,
-        max: 100000000,
-        step: 250000,
-        defaultValue: 0,
-        minLabel: "₦0",
-        maxLabel: "₦100M+",
-        format: "currency",
-      },
-    ],
-    fields: [
-      { key: "employmentType", label: "Employment Type", options: creditScoreSelectOptions.employmentType },
-      { key: "employmentDuration", label: "Employment Duration", options: creditScoreSelectOptions.employmentDuration },
-      { key: "incomeSources", label: "Number of Income Sources", options: creditScoreSelectOptions.incomeSources },
-      { key: "incomeDocumentation", label: "Income Documentation", options: creditScoreSelectOptions.incomeDocumentation },
+    items: [
+      { itemType: 'slider', key: "monthlyIncome", label: "Monthly Net Income (₦)", min: 0, max: 100000000, step: 250000, defaultValue: 0, scoreImpact: 46, minLabel: "₦0", maxLabel: "₦100M+", format: "currency" },
+      { itemType: 'field', key: "employmentType", label: "Employment Type", type: 'select', options: creditScoreSelectOptions.employmentType },
+      { itemType: 'field', key: "employmentDuration", label: "Employment Duration", type: 'select', options: creditScoreSelectOptions.employmentDuration },
+      { itemType: 'field', key: "incomeSources", label: "Number of Income Sources", type: 'select', options: creditScoreSelectOptions.incomeSources },
+      { itemType: 'field', key: "incomeDocumentation", label: "Income Documentation", type: 'select', options: creditScoreSelectOptions.incomeDocumentation },
     ],
   },
   {
     id: "cashflow_consistency",
     title: "Cashflow Consistency",
     weight: "20%",
-    fields: [
-      { key: "monthlyCredits", label: "Monthly Credits Consistency", options: creditScoreSelectOptions.monthlyCredits },
-      { key: "overdraftHistory", label: "Account Overdraft History", options: creditScoreSelectOptions.overdraftHistory },
-      { key: "savingsBehaviour", label: "Savings Behaviour", options: creditScoreSelectOptions.savingsBehaviour },
-      { key: "endOfMonthBalance", label: "End-of-Month Balance", options: creditScoreSelectOptions.endOfMonthBalance },
+    items: [
+      { itemType: 'field', key: "monthlyCredits", label: "Monthly Credits Consistency", type: 'select', options: creditScoreSelectOptions.monthlyCredits },
+      { itemType: 'field', key: "overdraftHistory", label: "Account Overdraft History", type: 'select', options: creditScoreSelectOptions.overdraftHistory },
+      { itemType: 'field', key: "savingsBehaviour", label: "Savings Behaviour", type: 'select', options: creditScoreSelectOptions.savingsBehaviour },
+      { itemType: 'field', key: "endOfMonthBalance", label: "End-of-Month Balance", type: 'select', options: creditScoreSelectOptions.endOfMonthBalance },
     ],
   },
   {
     id: "debt_to_income",
     title: "Debt-to-Income Ratio",
     weight: "20%",
-    sliders: [
-      {
-        key: "obligations",
-        label: "Existing Monthly Obligations (₦)",
-        min: 0,
-        max: 5000000,
-        step: 100000,
-        defaultValue: 0,
-        minLabel: "₦0",
-        maxLabel: "₦5M+",
-        format: "currency",
-      },
-    ],
-    fields: [
-      { key: "activeLoanCount", label: "Active Loan Count", options: creditScoreSelectOptions.activeLoanCount },
-      { key: "repaymentHistory", label: "Repayment History", options: creditScoreSelectOptions.repaymentHistory },
+    items: [
+      { itemType: 'slider', key: "obligations", label: "Existing Monthly Obligations (₦)", min: 0, max: 5000000, step: 100000, defaultValue: 0, scoreImpact: -34, minLabel: "₦0", maxLabel: "₦5M+", format: "currency" },
+      { itemType: 'field', key: "activeLoanCount", label: "Active Loan Count", type: 'select', options: creditScoreSelectOptions.activeLoanCount },
+      { itemType: 'field', key: "repaymentHistory", label: "Repayment History", type: 'select', options: creditScoreSelectOptions.repaymentHistory },
     ],
   },
   {
     id: "banking_behaviour",
     title: "Banking Behaviour",
     weight: "15%",
-    fields: [
-      { key: "activeBankAccounts", label: "Active Bank Accounts", options: creditScoreSelectOptions.activeBankAccounts },
-      { key: "transactionFrequency", label: "Transaction Frequency", options: creditScoreSelectOptions.transactionFrequency },
-      { key: "bankRelationshipAge", label: "Bank Relationship Age", options: creditScoreSelectOptions.bankRelationshipAge },
-      { key: "internationalTransactions", label: "International Transactions", options: creditScoreSelectOptions.internationalTransactions },
+    items: [
+      { itemType: 'field', key: "activeBankAccounts", label: "Active Bank Accounts", type: 'select', options: creditScoreSelectOptions.activeBankAccounts },
+      { itemType: 'field', key: "transactionFrequency", label: "Transaction Frequency", type: 'select', options: creditScoreSelectOptions.transactionFrequency },
+      { itemType: 'field', key: "bankRelationshipAge", label: "Bank Relationship Age", type: 'select', options: creditScoreSelectOptions.bankRelationshipAge },
+      { itemType: 'field', key: "internationalTransactions", label: "International Transactions", type: 'select', options: creditScoreSelectOptions.internationalTransactions },
     ],
   },
   {
     id: "digital_footprint",
     title: "Digital Footprint",
     weight: "10%",
-    fields: [
-      { key: "digitalLendingHistory", label: "Digital Lending History", options: creditScoreSelectOptions.digitalLendingHistory },
-      { key: "bvnNinStatus", label: "BVN / NIN Status", options: creditScoreSelectOptions.bvnNinStatus },
-      { key: "investmentActivity", label: "Investment Platform Activity", options: creditScoreSelectOptions.investmentActivity },
-      { key: "fintechUsage", label: "Fintech / Mobile Money Usage", options: creditScoreSelectOptions.fintechUsage },
+    items: [
+      { itemType: 'field', key: "digitalLendingHistory", label: "Digital Lending History", type: 'select', options: creditScoreSelectOptions.digitalLendingHistory },
+      { itemType: 'field', key: "bvnNinStatus", label: "BVN / NIN Status", type: 'select', options: creditScoreSelectOptions.bvnNinStatus },
+      { itemType: 'field', key: "investmentActivity", label: "Investment Platform Activity", type: 'select', options: creditScoreSelectOptions.investmentActivity },
+      { itemType: 'field', key: "fintechUsage", label: "Fintech / Mobile Money Usage", type: 'select', options: creditScoreSelectOptions.fintechUsage },
     ],
   },
   {
     id: "down_payment_strength",
     title: "Down Payment Strength",
     weight: "10%",
-    sliders: [
-      {
-        key: "downPayment",
-        label: "Down Payment Percentage",
-        min: 0,
-        max: 70,
-        step: 5,
-        defaultValue: 30,
-        minLabel: "0%",
-        maxLabel: "70%+",
-        format: "percent",
-      },
-    ],
-    fields: [
-      { key: "downPaymentSource", label: "Source of Down Payment", options: creditScoreSelectOptions.downPaymentSource },
-      { key: "downPaymentReadiness", label: "Down Payment Readiness", options: creditScoreSelectOptions.downPaymentReadiness },
+    items: [
+      { itemType: 'slider', key: "downPayment", label: "Down Payment Percentage", min: 0, max: 70, step: 5, defaultValue: 30, scoreImpact: 54, minLabel: "0%", maxLabel: "70%+", format: "percent" },
+      { itemType: 'field', key: "downPaymentSource", label: "Source of Down Payment", type: 'select', options: creditScoreSelectOptions.downPaymentSource },
+      { itemType: 'field', key: "downPaymentReadiness", label: "Down Payment Readiness", type: 'select', options: creditScoreSelectOptions.downPaymentReadiness },
     ],
   },
 ];
@@ -339,8 +304,14 @@ export const creditScoreSections: CreditScoreSection[] = [
 export const defaultCreditScoreForm: CreditScoreFormConfig = creditScoreSections;
 
 export const creditScoreFieldKeys = creditScoreSections.flatMap((section) =>
-  section.fields.map((field) => field.key)
+  getSectionFields(section).map((field) => field.key)
 );
+
+function defaultSliderScoreImpact(key: CreditScoreSliderKey): number {
+  if (key === "monthlyIncome") return 46;
+  if (key === "downPayment") return 54;
+  return -34;
+}
 
 function sectionWeightToNumber(weight: string): number {
   const parsed = Number(String(weight).replace("%", ""));
@@ -349,7 +320,7 @@ function sectionWeightToNumber(weight: string): number {
 }
 
 export function getCreditScoreFieldKeys(formConfig: CreditScoreFormConfig = defaultCreditScoreForm): string[] {
-  return formConfig.flatMap((section) => section.fields.map((field) => field.key));
+  return formConfig.flatMap((section) => getSectionFields(section).map((field) => field.key));
 }
 
 export function normalizeCreditScoreFormConfig(value: unknown): CreditScoreFormConfig {
@@ -368,67 +339,53 @@ export function normalizeCreditScoreFormConfig(value: unknown): CreditScoreFormC
       const weight = typeof rawSection.weight === "string" && rawSection.weight.trim()
         ? rawSection.weight.trim()
         : "0%";
-      const defaultSliders = defaultCreditScoreForm.find((section) => section.id === id)?.sliders;
-      const sliders = Array.isArray(rawSection.sliders)
-        ? rawSection.sliders
-            .map((slider) => {
-              if (!slider || typeof slider !== "object") return null;
-              const rawSlider = slider as Record<string, unknown>;
-              const key = rawSlider.key;
-              if (key !== "monthlyIncome" && key !== "obligations" && key !== "downPayment") return null;
-              const label = typeof rawSlider.label === "string" && rawSlider.label.trim()
-                ? rawSlider.label.trim()
-                : key;
-              const min = Number(rawSlider.min);
-              const max = Number(rawSlider.max);
-              const step = Number(rawSlider.step);
-              const defaultValue = Number(rawSlider.defaultValue);
-              const format = rawSlider.format === "currency" || rawSlider.format === "percent" || rawSlider.format === "number"
-                ? rawSlider.format
-                : "number";
-              if (![min, max, step, defaultValue].every(Number.isFinite)) return null;
-              return {
-                key,
-                label,
-                min,
-                max,
-                step,
-                defaultValue,
-                minLabel: typeof rawSlider.minLabel === "string" ? rawSlider.minLabel : String(min),
-                maxLabel: typeof rawSlider.maxLabel === "string" ? rawSlider.maxLabel : String(max),
-                format,
-              };
-            })
-            .filter((slider): slider is CreditScoreSliderField => Boolean(slider))
-        : defaultSliders;
-      const fields = Array.isArray(rawSection.fields)
-        ? rawSection.fields
-            .map((field, fieldIndex) => {
-              if (!field || typeof field !== "object") return null;
-              const rawField = field as Record<string, unknown>;
-              const label = typeof rawField.label === "string" && rawField.label.trim()
-                ? rawField.label.trim()
-                : `Question ${fieldIndex + 1}`;
-              const key = typeof rawField.key === "string" && rawField.key.trim()
-                ? rawField.key.trim()
-                : label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `field_${fieldIndex + 1}`;
-              const options = Array.isArray(rawField.options)
-                ? rawField.options
-                    .map((option) => {
-                      if (!option || typeof option !== "object") return null;
-                      const rawOption = option as Record<string, unknown>;
-                      const optionLabel = typeof rawOption.label === "string" ? rawOption.label.trim() : "";
-                      const optionValue = Number(rawOption.value);
-                      if (!optionLabel || !Number.isFinite(optionValue)) return null;
-                      return { label: optionLabel, value: optionValue };
-                    })
-                    .filter((option): option is CreditScoreFormOption => Boolean(option))
-                : [];
-              return { key, label, options };
-            })
-            .filter((field): field is CreditScoreFormField => Boolean(field))
-        : [];
-      return { id, title, weight, ...(sliders ? { sliders } : {}), fields };
+      const normalizeSlider = (rawSlider: Record<string, unknown>): ({ itemType: 'slider' } & CreditScoreSliderField) | null => {
+        const key = rawSlider.key;
+        if (key !== "monthlyIncome" && key !== "obligations" && key !== "downPayment") return null;
+        const label = typeof rawSlider.label === "string" && rawSlider.label.trim() ? rawSlider.label.trim() : String(key);
+        const min = Number(rawSlider.min);
+        const max = Number(rawSlider.max);
+        const step = Number(rawSlider.step);
+        const defaultValue = Number(rawSlider.defaultValue);
+        const scoreImpact = Number(rawSlider.scoreImpact);
+        const format = rawSlider.format === "currency" || rawSlider.format === "percent" || rawSlider.format === "number" ? rawSlider.format : "number";
+        if (![min, max, step, defaultValue].every(Number.isFinite)) return null;
+        return { itemType: 'slider', key, label, min, max, step, defaultValue, scoreImpact: Number.isFinite(scoreImpact) ? scoreImpact : defaultSliderScoreImpact(key), minLabel: typeof rawSlider.minLabel === "string" ? rawSlider.minLabel : String(min), maxLabel: typeof rawSlider.maxLabel === "string" ? rawSlider.maxLabel : String(max), format };
+      };
+      const normalizeField = (rawField: Record<string, unknown>, fieldIndex: number): ({ itemType: 'field' } & CreditScoreFormField) | null => {
+        if (!rawField || typeof rawField !== "object") return null;
+        const label = typeof rawField.label === "string" && rawField.label.trim() ? rawField.label.trim() : `Question ${fieldIndex + 1}`;
+        const key = typeof rawField.key === "string" && rawField.key.trim() ? rawField.key.trim() : label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `field_${fieldIndex + 1}`;
+        const options = Array.isArray(rawField.options) ? rawField.options.map((option) => {
+          if (!option || typeof option !== "object") return null;
+          const rawOption = option as Record<string, unknown>;
+          const optionLabel = typeof rawOption.label === "string" ? rawOption.label.trim() : "";
+          const optionValue = Number(rawOption.value);
+          if (!optionLabel || !Number.isFinite(optionValue)) return null;
+          return { label: optionLabel, value: optionValue };
+        }).filter((o): o is CreditScoreFormOption => Boolean(o)) : [];
+        const type = rawField.type === 'radio' ? 'radio' : 'select';
+        return { itemType: 'field', key, label, type, options };
+      };
+
+      let items: CreditScoreFormItem[];
+      if (Array.isArray(rawSection.items)) {
+        items = rawSection.items.map((rawItem, idx) => {
+          if (!rawItem || typeof rawItem !== "object") return null;
+          const raw = rawItem as Record<string, unknown>;
+          if (raw.itemType === 'slider') return normalizeSlider(raw);
+          return normalizeField(raw, idx);
+        }).filter((item): item is CreditScoreFormItem => Boolean(item));
+      } else {
+        const sliderItems = Array.isArray(rawSection.sliders)
+          ? rawSection.sliders.map((s) => s && typeof s === "object" ? normalizeSlider(s as Record<string, unknown>) : null).filter((s): s is ({ itemType: 'slider' } & CreditScoreSliderField) => Boolean(s))
+          : (defaultCreditScoreForm.find((sec) => sec.id === id)?.items.filter((i) => i.itemType === 'slider') ?? []) as ({ itemType: 'slider' } & CreditScoreSliderField)[];
+        const fieldItems = Array.isArray(rawSection.fields)
+          ? rawSection.fields.map((f, fi) => f && typeof f === "object" ? normalizeField(f as Record<string, unknown>, fi) : null).filter((f): f is ({ itemType: 'field' } & CreditScoreFormField) => Boolean(f))
+          : [];
+        items = [...sliderItems, ...fieldItems];
+      }
+      return { id, title, weight, items };
     })
     .filter((section): section is CreditScoreFormSection => Boolean(section));
 
@@ -493,7 +450,7 @@ export function getCreditScoreTier(score: number, tiers: CreditScoreTierConfig[]
   return {
     name: tier.label,
     color: tierColor(tier.name),
-    rate: `${tier.interest_rate}%${tier.name === "access" ? "+" : ""} p.a.`,
+    rate: `${tier.interest_rate}%+ p.a.`,
     maxTenure: `${tier.max_tenor_months} month${tier.max_tenor_months === 1 ? "" : "s"}`,
     minDownPayment: `${tier.min_down_payment}%`,
     note: tierNote(tier.name),
@@ -513,10 +470,15 @@ export function calculateCreditScore({
     ? fieldKeys.reduce((sum, key) => sum + (values[key] ?? 0), 0) / fieldKeys.length
     : 0;
 
-  const incomeBoost = Math.min(monthlyIncome / formula.income_boost_divisor, 1) * formula.income_boost_max;
-  const obligationPenalty = Math.min(obligations / formula.obligation_penalty_divisor, 1) * formula.obligation_penalty_max;
-  const downPaymentBoost = Math.min(downPayment / formula.down_payment_boost_divisor, 1) * formula.down_payment_boost_max;
-  const raw = formula.base_score + selectedAverage * formula.multiplier + incomeBoost + downPaymentBoost - obligationPenalty;
+  const sliders = formConfig.flatMap((section) => getSectionSliders(section));
+  const sliderValues: Record<CreditScoreSliderKey, number> = { monthlyIncome, obligations, downPayment };
+  const sliderImpact = sliders.reduce((sum, slider) => {
+    const range = slider.max - slider.min;
+    if (range <= 0) return sum;
+    const value = Math.max(slider.min, Math.min(slider.max, sliderValues[slider.key] ?? slider.defaultValue));
+    return sum + ((value - slider.min) / range) * slider.scoreImpact;
+  }, 0);
+  const raw = formula.base_score + selectedAverage * formula.multiplier + sliderImpact;
 
   return Math.max(formula.min_score, Math.min(formula.max_score, Math.round(raw)));
 }
@@ -547,7 +509,7 @@ export function getCreditScoreBreakdown(
 ): CreditScoreBreakdown[] {
   return formConfig.map((section) => {
     const weight = sectionWeightToNumber(section.weight);
-    const factorScore = averageSelectedFields(values, section.fields.map((field) => field.key));
+    const factorScore = averageSelectedFields(values, getSectionFields(section).map((field) => field.key));
     return {
       key: section.id,
       name: section.title,

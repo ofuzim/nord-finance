@@ -19,7 +19,7 @@ const TIERS = [
   {
     label: "Core Tier",
     rate: 0.22,
-    display: "22% p.a.",
+    display: "22%+ p.a.",
     rateLabel: "Core Tier",
     downPaymentRate: 0.3,
     tenures: [12, 24, 36],
@@ -28,7 +28,7 @@ const TIERS = [
   {
     label: "Premium Tier",
     rate: 0.18,
-    display: "18% p.a.",
+    display: "18%+ p.a.",
     rateLabel: "Premium Tier",
     downPaymentRate: 0.3,
     tenures: [12, 18],
@@ -37,7 +37,7 @@ const TIERS = [
   {
     label: "Prime Tier",
     rate: 0.09,
-    display: "9% p.a.",
+    display: "9%+ p.a.",
     rateLabel: "Prime Tier",
     downPaymentRate: 0.5,
     tenures: [6],

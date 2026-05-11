@@ -14,6 +14,8 @@ import {
   getCreditScoreFieldKeys,
   getCreditScoreSignals,
   getCreditScoreTier,
+  getSectionFields,
+  getSectionSliders,
   type CreditScoreBreakdown,
   type CreditScoreFormConfig,
   type CreditScoreFormulaConfig,
@@ -23,7 +25,7 @@ import {
   type CreditScoreTier,
   type CreditScoreTierConfig,
 } from "@/lib/creditScoreModel";
-import { saveCreditScore, getCreditScoreById } from "@/app/actions/credit-score";
+import { saveCreditScore, getCreditScoreById, getCreditScoreApplication } from "@/app/actions/credit-score";
 
 const DEBUG_BYPASS_SCORE_COMPLETION =
   process.env.NEXT_PUBLIC_BYPASS_COMPLETION === "true";
@@ -252,7 +254,8 @@ function ResultsPanel({
   breakdown,
   signals,
   firstName,
-  applicationUrl,
+  ctaLabel,
+  ctaBody,
   onEdit,
   onContinue,
 }: {
@@ -261,7 +264,8 @@ function ResultsPanel({
   breakdown: CreditScoreBreakdown[];
   signals: CreditScoreSignal[];
   firstName: string;
-  applicationUrl: string;
+  ctaLabel: string;
+  ctaBody: string;
   onEdit: () => void;
   onContinue: () => void;
 }) {
@@ -326,7 +330,7 @@ function ResultsPanel({
           Ready to move forward?
         </p>
         <p className="score-cta-body" style={{ fontFamily: "'Poppins', sans-serif", color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.8, marginBottom: 24 }}>
-          Your score is based on the information you've provided. When you apply, we verify your identity and documents to confirm your final rate and repayment terms.
+          {ctaBody}
         </p>
         <div className="score-cta-buttons" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button
@@ -350,7 +354,7 @@ function ResultsPanel({
               fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer",
             }}
           >
-            Start My Loan Application →
+            {ctaLabel}
           </button>
         </div>
       </ResultCard>
@@ -360,16 +364,24 @@ function ResultsPanel({
 
 const SESSION_KEY = "nord_credit_score_state";
 
+type CreditScoreApplication = {
+  id: string;
+  status: string;
+  referenceNumber: string;
+  currentStep: number;
+};
+
 export type InitialCreditScoreResult = {
   scoreId: string;
   values: Record<string, number>;
   monthlyIncome: number;
   obligations: number;
   downPayment: number;
+  application?: CreditScoreApplication | null;
 };
 
 function findSlider(formConfig: CreditScoreFormConfig, key: CreditScoreSliderKey): CreditScoreSliderField | undefined {
-  return formConfig.flatMap((section) => section.sliders ?? []).find((slider) => slider.key === key);
+  return formConfig.flatMap((section) => getSectionSliders(section)).find((slider) => slider.key === key);
 }
 
 function formatSliderValue(slider: CreditScoreSliderField | undefined, value: number): string {
@@ -406,6 +418,8 @@ export function CreditScoreCalculatorPage({
   const [isCalculating, setIsCalculating] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [scoreId, setScoreId] = useState<string | null>(initialResult?.scoreId ?? null);
+  const [linkedApplication, setLinkedApplication] = useState<CreditScoreApplication | null>(initialResult?.application ?? null);
+  const shouldAutoScrollResultRef = useRef(!initialResult);
 
   // Restore state from URL params (?scoreId=<id> or legacy ?result=1)
   useEffect(() => {
@@ -472,6 +486,36 @@ export function CreditScoreCalculatorPage({
       setResultRevealed(true);
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const refreshLinkedApplication = useCallback(async () => {
+    const id = scoreId;
+    if (!id) return null;
+
+    const application = await getCreditScoreApplication(id).catch(() => null);
+    if (!application || "error" in application) return null;
+
+    setLinkedApplication(application);
+    return application;
+  }, [scoreId]);
+
+  useEffect(() => {
+    if (!scoreId) return;
+
+    const refresh = () => {
+      void refreshLinkedApplication();
+    };
+
+    window.addEventListener("pageshow", refresh);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.removeEventListener("pageshow", refresh);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [refreshLinkedApplication, scoreId]);
+
   const sidebarRef = useRef<HTMLElement>(null);
   const resultStackRef = useRef<HTMLDivElement>(null);
   const formSectionRef = useRef<HTMLElement>(null);
@@ -483,6 +527,7 @@ export function CreditScoreCalculatorPage({
   const [touchedSliders, setTouchedSliders] = useState({
     monthlyIncome: false,
     obligations: false,
+    downPayment: false,
   });
 
   // Mobile: el.oninput fires on iOS Safari where React delegation misses range input events.
@@ -523,6 +568,7 @@ export function CreditScoreCalculatorPage({
         flushSync(() => {
           setDownPayDisplay(formatSliderValue(downPaymentSlider, v));
           setDownPayment(v);
+          setTouchedSliders(cur => ({ ...cur, downPayment: true }));
           setResultRevealed(false);
           setIsCalculating(false);
         });
@@ -550,7 +596,7 @@ export function CreditScoreCalculatorPage({
     [downPayment, monthlyIncome, obligations, score, values]
   );
   const employmentTypeLabel = formConfig
-    .flatMap((section) => section.fields)
+    .flatMap((section) => getSectionFields(section))
     .find((field) => field.key === "employmentType")
     ?.options.find((option) => option.value === values.employmentType)?.label;
   const applicationUrl = getApplicationUrl({
@@ -564,11 +610,47 @@ export function CreditScoreCalculatorPage({
     downPayment,
     scoreId: scoreId ?? undefined,
   });
+  const isDraftApplication = linkedApplication?.status === "draft";
+  const hasSubmittedApplication = Boolean(linkedApplication && !isDraftApplication);
+  const ctaLabel = isDraftApplication
+    ? "Continue My Application →"
+    : hasSubmittedApplication
+      ? "View Application Confirmation →"
+      : "Start My Loan Application →";
+  const ctaBody = isDraftApplication
+    ? "You already have a draft application for this score. Continue from where you stopped and submit when your documents are ready."
+    : hasSubmittedApplication
+      ? `Your application has already been submitted${linkedApplication?.referenceNumber ? ` with reference ${linkedApplication.referenceNumber}` : ""}. You can view your confirmation details anytime.`
+      : "Your score is based on the information you've provided. When you apply, we verify your identity and documents to confirm your final rate and repayment terms.";
+  const getCtaApplicationUrl = (application: CreditScoreApplication | null) => {
+    if (!application || !scoreId) return applicationUrl;
+
+    const isDraft = application.status === "draft";
+    const params = new URLSearchParams({ scoreId, id: application.id });
+    if (isDraft) {
+      params.set("step", String(Math.min(Math.max(application.currentStep || 1, 1), 4)));
+    } else {
+      params.delete("scoreId");
+      params.set("step", "success");
+    }
+    return `/application?${params.toString()}`;
+  };
+  const ctaApplicationUrl = getCtaApplicationUrl(linkedApplication);
+  const navigationHeading = isDraftApplication
+    ? "Opening Draft"
+    : hasSubmittedApplication
+      ? "Opening Confirmation"
+      : "Preparing Application";
+  const navigationBody = isDraftApplication
+    ? "Taking you back to your saved application."
+    : hasSubmittedApplication
+      ? "Loading your submitted application details."
+      : "Taking you to the full application form.";
   const hasPreview =
     completedSelects > 0 ||
     touchedSliders.monthlyIncome ||
     touchedSliders.obligations ||
-    Boolean(identity.firstName.trim() || identity.lastName.trim() || identity.email.trim());
+    touchedSliders.downPayment;
 
   const hideStaleResult = () => {
     if (resultRevealed) setResultRevealed(false);
@@ -595,6 +677,7 @@ export function CreditScoreCalculatorPage({
     } catch {}
     setIsCalculating(true);
     calculationTimerRef.current = setTimeout(async () => {
+      shouldAutoScrollResultRef.current = true;
       setResultRevealed(true);
       setIsCalculating(false);
       calculationTimerRef.current = null;
@@ -636,6 +719,9 @@ export function CreditScoreCalculatorPage({
 
   useEffect(() => {
     if (!showResult) return;
+    if (!shouldAutoScrollResultRef.current) return;
+
+    shouldAutoScrollResultRef.current = false;
 
     requestAnimationFrame(() => {
       scrollToResultStack();
@@ -676,6 +762,7 @@ export function CreditScoreCalculatorPage({
     } else {
       setDownPayDisplay(formatSliderValue(slider, value));
       setDownPayment(value);
+      setTouchedSliders(cur => ({ ...cur, downPayment: true }));
     }
     setResultRevealed(false);
     setIsCalculating(false);
@@ -787,10 +874,10 @@ export function CreditScoreCalculatorPage({
                 marginBottom: 10,
               }}
             >
-              Preparing Application
+              {navigationHeading}
             </p>
             <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, lineHeight: 1.8 }}>
-              Taking you to the full application form.
+              {navigationBody}
             </p>
           </div>
         </div>
@@ -875,14 +962,22 @@ export function CreditScoreCalculatorPage({
                 breakdown={breakdown}
                 signals={signals}
                 firstName={identity.firstName.trim()}
-                applicationUrl={applicationUrl}
+                ctaLabel={ctaLabel}
+                ctaBody={ctaBody}
                 onEdit={editDetails}
-                onContinue={() => {
+                onContinue={async () => {
                   setIsNavigating(true);
+                  const latestApplication = await refreshLinkedApplication();
+                  const nextUrl = getCtaApplicationUrl(latestApplication ?? linkedApplication);
+                  if (scoreId) {
+                    try {
+                      sessionStorage.setItem("nord_application_success_back_url", `/credit-score/results/${scoreId}`);
+                    } catch {}
+                  }
                   if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
                   navigationTimerRef.current = setTimeout(() => {
                     navigationTimerRef.current = null;
-                    window.location.assign(applicationUrl);
+                    window.location.assign(nextUrl);
                   }, 1600);
                 }}
               />
@@ -933,61 +1028,52 @@ export function CreditScoreCalculatorPage({
               <div key={section.title} style={{ marginBottom: 54 }}>
                 <SectionHeader title={section.title} weight={section.weight} />
 
-                {(section.sliders ?? []).map((slider) => {
-                  const sliderState = getSliderState(slider.key);
-                  return (
-                    <div key={slider.key} style={{ marginBottom: 24 }}>
-                      <FieldLabel>{slider.label}</FieldLabel>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>{slider.minLabel}</span>
-                        <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{sliderState.display}</span>
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>{slider.maxLabel}</span>
-                      </div>
-                      <input
-                        ref={sliderState.ref}
-                        type="range"
-                        min={slider.min}
-                        max={slider.max}
-                        step={slider.step}
-                        value={sliderState.value}
-                        className="score-range"
-                        onChange={(e) => setSliderValue(slider, Number(e.target.value))}
-                      />
-                    </div>
-                  );
-                })}
-
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }} className="score-field-grid">
-                  {section.fields.map((field) => (
-                    <div key={field.key}>
-                      <FieldLabel>{field.label}</FieldLabel>
-                      <select
-                        value={values[field.key] ?? ""}
-                        onChange={(e) => {
-                          hideStaleResult();
-                          setValues({
-                            ...values,
-                            [field.key]: Number(e.target.value),
-                          });
-                        }}
-                        style={{
-                          ...fieldStyle(),
-                          cursor: "pointer",
-                          appearance: "none",
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C39529' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 18px center",
-                        }}
-                      >
-                        <option value="">- Select -</option>
-                        {field.options.map((option) => (
-                          <option key={option.label} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
+                  {section.items.map((item) => {
+                    if (item.itemType === 'slider') {
+                      const sliderState = getSliderState(item.key);
+                      return (
+                        <div key={item.key} style={{ gridColumn: 'span 2', marginBottom: 6 }}>
+                          <FieldLabel>{item.label}</FieldLabel>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>{item.minLabel}</span>
+                            <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{sliderState.display}</span>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>{item.maxLabel}</span>
+                          </div>
+                          <input ref={sliderState.ref} type="range" min={item.min} max={item.max} step={item.step} value={sliderState.value} className="score-range" onChange={(e) => setSliderValue(item, Number(e.target.value))} />
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={item.key} style={item.type === 'radio' ? { gridColumn: 'span 2' } : {}}>
+                        <FieldLabel>{item.label}</FieldLabel>
+                        {item.type === 'radio' ? (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, paddingTop: 4 }}>
+                            {item.options.map((option) => {
+                              const selected = String(values[item.key]) === String(option.value);
+                              return (
+                                <button key={option.label} type="button"
+                                  onClick={() => { hideStaleResult(); setValues({ ...values, [item.key]: option.value }); }}
+                                  style={{ padding: "10px 20px", borderRadius: 50, border: `1.5px solid ${selected ? "#C39529" : "rgba(255,255,255,0.12)"}`, backgroundColor: selected ? "rgba(195,149,41,0.15)" : "rgba(255,255,255,0.04)", color: selected ? "#C39529" : "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: selected ? 600 : 400, fontFamily: "'Poppins', sans-serif", cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap" }}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <select value={values[item.key] ?? ""} onChange={(e) => { hideStaleResult(); setValues({ ...values, [item.key]: Number(e.target.value) }); }}
+                            style={{ ...fieldStyle(), cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C39529' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 18px center" }}
+                          >
+                            <option value="">- Select -</option>
+                            {item.options.map((option) => (
+                              <option key={option.label} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}

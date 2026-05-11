@@ -514,10 +514,11 @@ export function Navigation() {
         })}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center", marginTop: 8 }}>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="mobile-menu-actions">
             <Link
               href="/credit-score"
               prefetch={false}
+              className="mobile-menu-action"
               onClick={(event) => {
                 event.preventDefault();
                 if (!applyDisabled) navigateDocument("/credit-score");
@@ -542,6 +543,7 @@ export function Navigation() {
             <Link
               href="/status"
               prefetch={false}
+              className="mobile-menu-action"
               onClick={(event) => { event.preventDefault(); navigateDocument("/status"); }}
               style={{
                 fontFamily: "'Poppins', sans-serif",
@@ -663,6 +665,15 @@ export function Navigation() {
         #nav-toggle { display: none; }
         .mobile-overlay { display: none; }
         .nav-hamburger { display: none; }
+        .mobile-menu-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: min(260px, 100%);
+        }
+        .mobile-menu-action {
+          text-align: center;
+        }
         .nav-dropdown {
           position: relative;
           display: inline-flex;

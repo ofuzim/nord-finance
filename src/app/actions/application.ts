@@ -70,7 +70,7 @@ export async function lookupApplicationByReference(referenceNumber: string): Pro
 }
 
 export async function getDraftApplication(id: string): Promise<
-  { fields: Record<string, string>; step: number } | { error: string }
+  { fields: Record<string, string>; step: number; status: string; referenceNumber: string } | { error: string }
 > {
   try {
     const service = await createServiceClient()
@@ -110,7 +110,12 @@ export async function getDraftApplication(id: string): Promise<
     fields.bvn = s(data.bvn)
     fields.vehicleCategory = s(data.vehicle_category)
     fields.vehicleModel = s(data.vehicle_model)
-    return { fields, step: data.current_step ?? 1 }
+    return {
+      fields,
+      step: data.current_step ?? 1,
+      status: data.status,
+      referenceNumber: data.reference_number,
+    }
   } catch (err) {
     return { error: String(err) }
   }
@@ -153,17 +158,28 @@ function buildApplicationFields(values: Record<string, string>) {
 export async function saveDraftApplication({
   values,
   applicationId,
+  creditScoreId,
+  currentStep,
 }: {
   values: Record<string, string>
   applicationId: string | null
+  creditScoreId?: string | null
+  currentStep?: number
 }): Promise<{ id: string; referenceNumber: string } | { error: string }> {
   try {
     const service = await createServiceClient()
     const fields = buildApplicationFields(values)
+    const draftFields = {
+      ...fields,
+      ...(currentStep ? { current_step: currentStep } : {}),
+    }
 
     if (applicationId) {
-      const { error } = await service.from('applications').update(fields).eq('id', applicationId)
+      const { error } = await service.from('applications').update(draftFields).eq('id', applicationId)
       if (error) return { error: error.message }
+      if (creditScoreId) {
+        await service.from('credit_scores').update({ application_id: applicationId }).eq('id', creditScoreId)
+      }
       const { data: app } = await service.from('applications').select('reference_number').eq('id', applicationId).single()
       return { id: applicationId, referenceNumber: app!.reference_number }
     }
@@ -177,11 +193,14 @@ export async function saveDraftApplication({
 
     const { data: app, error } = await service
       .from('applications')
-      .insert({ ...fields, reference_number: referenceNumber, status: 'draft', current_step: 1 })
+      .insert({ ...fields, reference_number: referenceNumber, status: 'draft', current_step: currentStep ?? 1 })
       .select('id')
       .single()
 
     if (error) return { error: error.message }
+    if (creditScoreId) {
+      await service.from('credit_scores').update({ application_id: app.id }).eq('id', creditScoreId)
+    }
     return { id: app.id, referenceNumber }
   } catch (err) {
     return { error: String(err) }

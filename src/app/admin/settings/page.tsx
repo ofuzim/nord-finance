@@ -16,8 +16,8 @@ export default async function SettingsPage() {
   return (
     <div>
       <div style={{ padding: '24px 40px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <h1 style={{ color: 'white', fontSize: 22, fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>Credit Scoring Settings</h1>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, lineHeight: 1.3 }}>Adjust scoring weights, tier thresholds, and formula parameters. Changes apply to all new assessments.</p>
+        <h1 style={{ color: 'white', fontSize: 22, fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>Assessment Settings</h1>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, lineHeight: 1.3 }}>Adjust scoring questions, tier thresholds, formula parameters, and KYC fields. Changes apply to all new assessments.</p>
       </div>
       <div style={{ padding: '32px 40px' }}>
         <SettingsForm initialConfig={configMap} />

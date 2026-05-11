@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { creditScoreSections, type CreditScoreFormConfig } from '@/lib/creditScoreModel'
+import { creditScoreSections, getSectionFields, type CreditScoreFormConfig } from '@/lib/creditScoreModel'
 
 function getOptionLabel(formConfig: CreditScoreFormConfig, fieldKey: string, value: number | undefined): { label: string; unmapped: boolean } | null {
   if (value === undefined || value === null) return null
-  const field = formConfig.flatMap(section => section.fields).find(item => item.key === fieldKey)
+  const field = formConfig.flatMap(section => getSectionFields(section)).find(item => item.key === fieldKey)
   if (!field) return { label: String(value), unmapped: true }
   const option = field.options.find(o => o.value === value)
   return option ? { label: option.label, unmapped: false } : { label: String(value), unmapped: true }
@@ -19,7 +19,7 @@ export function ScoreQuestionnaire({
   formConfig?: CreditScoreFormConfig;
 }) {
   const [open, setOpen] = useState(false)
-  const configuredFields = formConfig.flatMap(section => section.fields)
+  const configuredFields = formConfig.flatMap(section => getSectionFields(section))
   const configuredKeys = new Set(configuredFields.map(field => field.key))
   const unmappedResponses = Object.entries(formResponses).filter(([key]) => !configuredKeys.has(key))
 

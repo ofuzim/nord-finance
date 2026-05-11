@@ -59,6 +59,7 @@ export function ScrollReset() {
 
   useLayoutEffect(() => {
     const fallbackReveal = window.setTimeout(reveal, 700)
+    const revealTimerIds: number[] = []
 
     if (isFirstRun.current) {
       isFirstRun.current = false
@@ -84,17 +85,23 @@ export function ScrollReset() {
 
         const restore = () => {
           window.scrollTo(x, y)
-          reveal()
         }
 
         restore()
         requestAnimationFrame(() => {
           restore()
-          requestAnimationFrame(restore)
+          requestAnimationFrame(() => {
+            restore()
+            reveal()
+          })
         })
-        window.setTimeout(restore, 120)
-        window.setTimeout(restore, 360)
-        return () => window.clearTimeout(fallbackReveal)
+        revealTimerIds.push(window.setTimeout(restore, 120))
+        revealTimerIds.push(window.setTimeout(restore, 360))
+        revealTimerIds.push(window.setTimeout(reveal, 380))
+        return () => {
+          window.clearTimeout(fallbackReveal)
+          revealTimerIds.forEach((id) => window.clearTimeout(id))
+        }
       }
 
       reveal()

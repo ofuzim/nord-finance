@@ -15,10 +15,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#000' }}>
       <NavigationProgress />
       <AdminSidebar admin={admin as AdminUser} />
-      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
         {children}
       </main>
     </div>

@@ -109,3 +109,38 @@ export async function getCreditScoreById(id: string): Promise<
     return { error: String(err) }
   }
 }
+
+export async function getCreditScoreApplication(id: string): Promise<
+  {
+    id: string
+    status: string
+    referenceNumber: string
+    currentStep: number
+  } | null | { error: string }
+> {
+  try {
+    const service = await createServiceClient()
+    const { data, error } = await service
+      .from('credit_scores')
+      .select('applications(id, reference_number, status, current_step)')
+      .eq('id', id)
+      .single()
+
+    if (error) return { error: error.message }
+
+    const application = Array.isArray(data.applications)
+      ? data.applications[0]
+      : data.applications
+
+    if (!application) return null
+
+    return {
+      id: application.id,
+      status: application.status,
+      referenceNumber: application.reference_number,
+      currentStep: application.current_step ?? 1,
+    }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
