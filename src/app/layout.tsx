@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import favIcon from '@/imports/fav.jpg'
 import { ScrollReset } from '@/components/ScrollReset'
+import { NavigationProgress } from '@/components/NavigationProgress'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -56,6 +57,7 @@ export default function RootLayout({
         <link rel="preload" href="/fonts/morpha_bold.otf" as="font" type="font/otf" crossOrigin="anonymous" />
       </head>
       <body style={{ margin: 0, height: '100%', fontFamily: "'Poppins', sans-serif" }}>
+        <NavigationProgress />
         <ScrollReset />
         {children}
       </body>

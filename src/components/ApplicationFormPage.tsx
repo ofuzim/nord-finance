@@ -10,9 +10,13 @@ import suvOutline from "@/imports/suv-outline.svg";
 import pickupOutline from "@/imports/pick-up-outline.svg";
 import busOutline from "@/imports/bus-outline.svg";
 import { vehicleGroups } from "@/lib/vehicleCatalog";
+import { getDocumentUploadUrl, saveDraftApplication, finalizeApplication, getDraftApplication, sendApplicationConfirmationEmail } from "@/app/actions/application";
+import { getCreditScoreById } from "@/app/actions/credit-score";
+import { defaultCreditScoreTiers, getCreditScoreTier, type CreditScoreTierConfig } from "@/lib/creditScoreModel";
 
 type FormValues = Record<string, string>;
-type UploadValues = Record<string, string>;
+type UploadedFile = { storagePath: string; fileName: string; fileSize: number; mimeType: string };
+type UploadValues = Record<string, UploadedFile>;
 
 const BYPASS_COMPLETION = process.env.NEXT_PUBLIC_BYPASS_COMPLETION === "true";
 
@@ -260,47 +264,115 @@ function RadioGroup({
   );
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 function UploadBox({
   title,
   subtitle,
   name,
   uploads,
-  setUploads,
+  onUploaded,
+  onUploadStart,
+  onUploadEnd,
 }: {
   title: string;
   subtitle: string;
   name: string;
   uploads: UploadValues;
-  setUploads: React.Dispatch<React.SetStateAction<UploadValues>>;
+  onUploaded: (name: string, file: UploadedFile) => void;
+  onUploadStart: () => void;
+  onUploadEnd: () => void;
 }) {
-  const fileName = uploads[name];
+  const existing = uploads[name];
+  const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">(existing ? "done" : "idle");
+  const [displayName, setDisplayName] = useState<string | null>(existing?.fileName ?? null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleFile = async (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      setStatus("error");
+      setErrorMsg("File too large. Max 5MB.");
+      return;
+    }
+    setStatus("uploading");
+    setDisplayName(file.name);
+    setErrorMsg(null);
+    onUploadStart();
+    try {
+      const ext = file.name.split(".").pop() ?? "bin";
+
+      // Get a signed upload URL from the server (tiny request — no file data)
+      const urlResult = await getDocumentUploadUrl(name, ext);
+      if ("error" in urlResult) {
+        setStatus("error");
+        setErrorMsg(urlResult.error);
+        return;
+      }
+
+      // Upload directly from browser to Supabase Storage via signed URL
+      const uploadRes = await fetch(urlResult.signedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      if (!uploadRes.ok) {
+        const body = await uploadRes.text().catch(() => "");
+        setStatus("error");
+        setErrorMsg(`Upload failed (${uploadRes.status}). Please try again.`);
+        console.error("Storage upload error:", uploadRes.status, body);
+        onUploadEnd();
+        return;
+      }
+
+      setStatus("done");
+      onUploadEnd();
+      onUploaded(name, { storagePath: urlResult.storagePath, fileName: file.name, fileSize: file.size, mimeType: file.type });
+    } catch {
+      setStatus("error");
+      setErrorMsg("Upload failed. Please try again.");
+      onUploadEnd();
+    }
+  };
+
+  const isDone = status === "done";
+  const isUploading = status === "uploading";
+  const isError = status === "error";
 
   return (
     <label
       style={{
         display: "block",
-        border: fileName ? "1px dashed rgba(34,197,94,0.55)" : "1px dashed rgba(255,255,255,0.14)",
-        backgroundColor: fileName ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.045)",
+        border: isDone ? "1px dashed rgba(34,197,94,0.55)" : isError ? "1px dashed rgba(239,68,68,0.5)" : "1px dashed rgba(255,255,255,0.14)",
+        backgroundColor: isDone ? "rgba(34,197,94,0.06)" : isError ? "rgba(239,68,68,0.05)" : "rgba(255,255,255,0.045)",
         borderRadius: 14,
         padding: 24,
-        cursor: "pointer",
+        cursor: isUploading ? "default" : "pointer",
         textAlign: "center",
+        pointerEvents: isUploading ? "none" : "auto",
       }}
     >
       <input
         type="file"
         accept=".jpg,.jpeg,.png,.pdf"
         style={{ display: "none" }}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          setUploads((current) => ({ ...current, [name]: file.name }));
-        }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
       />
       <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}>
-        {fileName ? (
+        {isUploading ? (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C39529" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="#C39529">
+              <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+            </path>
+          </svg>
+        ) : isDone ? (
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : isError ? (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         ) : (
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -312,7 +384,9 @@ function UploadBox({
       </div>
       <p style={{ color: "white", fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{title}</p>
       <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, lineHeight: 1.6 }}>{subtitle}</p>
-      {fileName && <p style={{ color: "#22c55e", fontSize: 12, marginTop: 10 }}>{fileName}</p>}
+      {isUploading && <p style={{ color: "#C39529", fontSize: 12, marginTop: 10 }}>Uploading…</p>}
+      {isDone && <p style={{ color: "#22c55e", fontSize: 12, marginTop: 10 }}>{displayName}</p>}
+      {isError && <p style={{ color: "#ef4444", fontSize: 11, marginTop: 10 }}>Upload failed — tap to retry</p>}
     </label>
   );
 }
@@ -420,7 +494,7 @@ function ApplicationSuccessCarLoader() {
       <style>{`
         .success-loader-stage {
           width: min(520px, 82vw);
-          margin: 0 auto 32px;
+          margin: 0 auto 16px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -612,7 +686,7 @@ function StepNav({
   );
 }
 
-export function ApplicationFormPage() {
+export function ApplicationFormPage({ tiers = defaultCreditScoreTiers }: { tiers?: CreditScoreTierConfig[] }) {
   const searchParams = useSearchParams();
   const carriedScore = searchParams.get("score");
   const carriedTier = searchParams.get("tier");
@@ -622,6 +696,8 @@ export function ApplicationFormPage() {
   const carriedEmploymentType = searchParams.get("employmentType") ?? "";
   const carriedMonthlyIncome = searchParams.get("monthlyIncome") ?? "";
   const carriedDownPayment = searchParams.get("downPayment") ?? "";
+  const carriedScoreId = searchParams.get("scoreId") ?? "";
+  const resumeId = searchParams.get("id") ?? "";
 
   const formRef = React.useRef<HTMLDivElement>(null);
 
@@ -634,8 +710,15 @@ export function ApplicationFormPage() {
   const [isContinuing, setIsContinuing] = useState(false);
   const [consent, setConsent] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [uploads, setUploads] = useState<UploadValues>({});
+  const [activeUploads, setActiveUploads] = useState(0);
+  const [applicationId, setApplicationId] = useState<string | null>(resumeId || null);
+  const [refCopied, setRefCopied] = useState(false);
+  const [displayScore, setDisplayScore] = useState<string | null>(carriedScore || null);
+  const [displayTier, setDisplayTier] = useState<string | null>(carriedTier || null);
   const applicationUrlRef = useRef("");
   const currentStepRef = useRef(initialStep);
   const successRef = useRef(initialSuccess);
@@ -652,6 +735,53 @@ export function ApplicationFormPage() {
     monthlyIncome: carriedMonthlyIncome,
     downPayment: carriedDownPayment,
   });
+
+  const creditScoreBackUrl = carriedScoreId
+    ? `/credit-score/results/${carriedScoreId}`
+    : "/credit-score?result=1";
+
+  // Load draft from DB when resuming via ?id=
+  useEffect(() => {
+    if (!resumeId) return;
+    getDraftApplication(resumeId).then((result) => {
+      if ("error" in result) return;
+      setValues((current) => ({ ...current, ...result.fields }));
+      if (result.fields.vehicleModel) {
+        const group = vehicleGroups.find((g) => g.models.includes(result.fields.vehicleModel));
+        if (group) setSelectedCategory(group.category);
+      }
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-fill financial fields from score record; set display score/tier; clean redundant URL params
+  useEffect(() => {
+    if (!carriedScoreId) return;
+    getCreditScoreById(carriedScoreId).then((result) => {
+      if ("error" in result) return;
+      let sessionIdentity: { firstName?: string; lastName?: string; email?: string } = {};
+      try {
+        const saved = sessionStorage.getItem("nord_credit_score_state");
+        const parsed = saved ? JSON.parse(saved) : null;
+        sessionIdentity = parsed?.identity ?? {};
+      } catch {}
+      setValues((current) => ({
+        ...current,
+        firstName: current.firstName || result.firstName || sessionIdentity.firstName || "",
+        lastName: current.lastName || result.lastName || sessionIdentity.lastName || "",
+        emailAddress: current.emailAddress || result.email || sessionIdentity.email || "",
+        monthlyIncome: current.monthlyIncome || String(result.monthlyIncome),
+        downPayment: current.downPayment || String(result.downPayment),
+      }));
+      setDisplayScore(String(result.score));
+      setDisplayTier(getCreditScoreTier(result.score, tiers).name);
+      const params = new URLSearchParams(window.location.search);
+      const redundant = ["score", "tier", "firstName", "lastName", "email", "employmentType", "monthlyIncome", "downPayment"];
+      if (redundant.some((k) => params.has(k))) {
+        redundant.forEach((k) => params.delete(k));
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+      }
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = success ? 100 : (currentStep / steps.length) * 100;
 
@@ -683,14 +813,23 @@ export function ApplicationFormPage() {
     window.history.pushState({ nordApplicationGuard: true }, "", applicationUrlRef.current);
 
     const handleBrowserBack = () => {
-      if (successRef.current) {
-        window.location.assign("/credit-score?result=1");
-        return;
-      }
-
       if (window.location.pathname === "/application") {
         const params = new URLSearchParams(window.location.search);
         const stepParamFromUrl = params.get("step");
+
+        // Always restore success state when URL says success — must come before successRef check
+        if (stepParamFromUrl === "success") {
+          setSuccess(true);
+          applicationUrlRef.current = `${window.location.pathname}${window.location.search}`;
+          return;
+        }
+
+        // On success, going back to a numbered step means application is done — return to score page
+        if (successRef.current) {
+          window.location.assign(creditScoreBackUrl);
+          return;
+        }
+
         const stepFromUrl = Math.min(Math.max(parseInt(stepParamFromUrl ?? "1", 10) || 1, 1), steps.length);
 
         if (currentStepRef.current === 1 && stepFromUrl === 1) {
@@ -708,6 +847,12 @@ export function ApplicationFormPage() {
         return;
       }
 
+      // Outside /application entirely
+      if (successRef.current) {
+        window.location.assign(creditScoreBackUrl);
+        return;
+      }
+
       const currentApplicationUrl =
         applicationUrlRef.current || `/application${window.location.search}`;
       window.history.pushState({ nordApplicationGuard: true }, "", currentApplicationUrl);
@@ -720,31 +865,40 @@ export function ApplicationFormPage() {
     };
   }, [scheduleFormScroll]);
 
-  const setStep = (step: number, scrollBehavior: ScrollBehavior = "smooth") => {
+  const setStep = (step: number, scrollBehavior: ScrollBehavior = "smooth", appId?: string) => {
     setSuccess(false);
     setCurrentStepState(step);
     const params = new URLSearchParams(searchParams.toString());
     params.set("step", String(step));
+    const idToUse = appId ?? applicationId;
+    if (idToUse) params.set("id", idToUse);
     const nextUrl = `?${params.toString()}`;
     applicationUrlRef.current = `${window.location.pathname}${nextUrl}`;
     window.history.pushState(null, "", nextUrl);
     scheduleFormScroll(scrollBehavior);
   };
 
-  const continueToStep = (step: number) => {
+  const continueToStep = async (step: number) => {
     if (isContinuing) return;
     setIsContinuing(true);
 
-    if (continueTimerRef.current !== null) {
-      window.clearTimeout(continueTimerRef.current);
+    const wait = (ms: number) => new Promise<void>(r => { continueTimerRef.current = window.setTimeout(() => { continueTimerRef.current = null; r(); }, ms); });
+
+    // Save draft in parallel with the animation delay
+    const [saveResult] = await Promise.all([
+      saveDraftApplication({ values, applicationId }).catch(() => null),
+      wait(420),
+    ]);
+
+    let newAppId = applicationId;
+    if (saveResult && 'id' in saveResult) {
+      newAppId = saveResult.id;
+      setApplicationId(newAppId);
     }
 
-    continueTimerRef.current = window.setTimeout(() => {
-      const scrollBehavior = window.matchMedia("(max-width: 960px)").matches ? "auto" : "smooth";
-      setStep(step, scrollBehavior);
-      setIsContinuing(false);
-      continueTimerRef.current = null;
-    }, 420);
+    const scrollBehavior = window.matchMedia("(max-width: 960px)").matches ? "auto" : "smooth";
+    setStep(step, scrollBehavior, newAppId ?? undefined);
+    setIsContinuing(false);
   };
 
   useEffect(() => {
@@ -779,42 +933,65 @@ export function ApplicationFormPage() {
       ["Employment", values.employmentType || "--"],
       ["Residential Status", values.residentialStatus || "--"],
       ["Vehicle of Interest", selectedVehicle || "--"],
-      ["Score / Tier", carriedScore && carriedTier ? `${carriedScore} - ${carriedTier}` : "--"],
+      ["Score / Tier", displayScore && displayTier ? `${displayScore} - ${displayTier}` : "--"],
       ["Monthly Income", values.monthlyIncome ? `N${Number(values.monthlyIncome).toLocaleString("en-NG")}` : "--"],
       ["Down Payment", values.downPayment ? `${values.downPayment}%` : "--"],
       ["BVN Provided", values.bvn ? "Yes" : "No"],
       ["NIN Provided", values.nin ? "Yes" : "No"],
     ],
-    [carriedScore, carriedTier, selectedVehicle, values]
+    [displayScore, displayTier, selectedVehicle, values]
   );
 
-  const submitApplication = () => {
+  const submitApplication = async () => {
     if (isSubmitting) return;
-    if (!consent && !BYPASS_COMPLETION) {
-      return;
-    }
+    if (!consent && !BYPASS_COMPLETION) return;
 
-    const submission = {
-      ...values,
-      uploads,
-      creditScore: carriedScore,
-      creditTier: carriedTier,
-      submittedAt: new Date().toISOString(),
-    };
-
-    const existing = JSON.parse(window.localStorage.getItem("nordKycSubmissions") || "[]");
-    existing.push(submission);
-    window.localStorage.setItem("nordKycSubmissions", JSON.stringify(existing));
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    setSubmitError(null);
+
+    try {
+      // Ensure we have a draft application record (should already exist from step advances)
+      let appId = applicationId;
+      if (!appId) {
+        const draft = await saveDraftApplication({ values, applicationId: null });
+        if ("error" in draft) {
+          setSubmitError("Failed to save application. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+        appId = draft.id;
+        setApplicationId(appId);
+      }
+
+      let creditScoreId: string | null = carriedScoreId || null;
+      try {
+        const saved = sessionStorage.getItem("nord_credit_score_state");
+        const parsed = saved ? JSON.parse(saved) : null;
+        if (parsed?.creditScoreId) creditScoreId = parsed.creditScoreId;
+      } catch {}
+
+      // Finalize: set status to submitted, insert documents, link score, send email
+      const result = await finalizeApplication({ applicationId: appId, creditScoreId, fileUploads: uploads });
+
+      if ("error" in result) {
+        setSubmitError("Submission failed. Please try again or contact us.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setReferenceNumber(result.referenceNumber);
       setIsSubmitting(false);
       setSuccess(true);
+      void sendApplicationConfirmationEmail({ applicationId: appId }).catch(() => null);
       const params = new URLSearchParams(searchParams.toString());
       params.set("step", "success");
       const successUrl = `?${params.toString()}`;
       applicationUrlRef.current = `${window.location.pathname}${successUrl}`;
       window.history.replaceState(null, "", successUrl);
-    }, 1400);
+    } catch {
+      setSubmitError("Something went wrong. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -930,7 +1107,7 @@ export function ApplicationFormPage() {
                 </p>
               </div>
               <div style={{ minWidth: 260 }}>
-                {(carriedScore || carriedTier) && (
+                {(displayScore || displayTier) && (
                   <div
                     style={{
                       border: "1px solid rgba(255,255,255,0.14)",
@@ -950,11 +1127,11 @@ export function ApplicationFormPage() {
                       </span>
                     </div>
                     <p style={{ color: "#C39529", fontWeight: 800, fontSize: 48, lineHeight: 1, letterSpacing: "-0.03em", marginBottom: 8 }}>
-                      {carriedScore ?? "--"}
+                      {displayScore ?? "--"}
                     </p>
-                    {carriedTier && (
+                    {displayTier && (
                       <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                        {carriedTier}
+                        {displayTier}
                       </p>
                     )}
                   </div>
@@ -980,12 +1157,48 @@ export function ApplicationFormPage() {
               <h2 style={{ fontFamily: "'Morpha', Georgia, serif", fontSize: 52, lineHeight: 1.05, marginBottom: 18 }}>
                 Application <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Submitted</em>
               </h2>
-              <p style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.9, maxWidth: 560, margin: "0 auto 34px" }}>
-                Thank you for your application. Our team will review your information and contact you within 24-48 hours via WhatsApp or email.
+
+              {referenceNumber && (
+                <div style={{ marginBottom: 28, backgroundColor: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "22px 32px", maxWidth: 400, width: "100%" }}>
+                  <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>
+                    Your Reference Number
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 10 }}>
+                    <p style={{ fontSize: 26, fontWeight: 800, letterSpacing: "0.12em", color: "#C39529", margin: 0 }}>
+                      {referenceNumber}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(referenceNumber).then(() => {
+                          setRefCopied(true);
+                          setTimeout(() => setRefCopied(false), 2000);
+                        }).catch(() => {});
+                      }}
+                      title="Copy reference number"
+                      style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: refCopied ? "#22c55e" : "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", flexShrink: 0, transition: "color 0.2s ease" }}
+                    >
+                      {refCopied ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      )}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>
+                    Save this number. Use it to check your application status at{" "}
+                    <Link href="/status" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "underline" }}>nordfinance.ng/status</Link>.
+                  </p>
+                </div>
+              )}
+
+              <p style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.9, maxWidth: 560, margin: "0 auto 28px" }}>
+                Thank you for your application. Our team will review your information and contact you within 24–48 hours via WhatsApp or email.
               </p>
+
               <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
-                <Link href="/" style={{ backgroundColor: "#C39529", color: "#000", borderRadius: 100, padding: "14px 26px", textDecoration: "none", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-                  Back Home
+                <Link href="/status" style={{ backgroundColor: "#C39529", color: "#000", borderRadius: 100, padding: "14px 26px", textDecoration: "none", fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+                  Track Application
                 </Link>
                 <a href="https://wa.me/2348149799150" target="_blank" rel="noreferrer" style={{ border: "1px solid rgba(255,255,255,0.16)", color: "rgba(255,255,255,0.72)", borderRadius: 100, padding: "14px 26px", textDecoration: "none", fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" }}>
                   Contact Us
@@ -996,7 +1209,26 @@ export function ApplicationFormPage() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 42 }} className="step-title-block">
                 <h2 style={{ fontFamily: "'Morpha', Georgia, serif", fontWeight: 400, fontSize: 30, color: "white" }}>{steps[currentStep - 1]}</h2>
-                <span className="step-indicator" style={{ color: "rgba(255,255,255,0.32)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}>Step {currentStep} of 4</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span className="step-indicator" style={{ color: "rgba(255,255,255,0.32)", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}>Step {currentStep} of 4</span>
+                  {applicationId && currentStep < 4 && (
+                    <button
+                      type="button"
+                      title="Copy resume link"
+                      onClick={() => {
+                        const params = new URLSearchParams(window.location.search);
+                        params.set("id", applicationId);
+                        params.set("step", String(currentStep));
+                        const url = `${window.location.origin}/application?${params.toString()}`;
+                        navigator.clipboard.writeText(url).then(() => {}).catch(() => {});
+                        window.prompt("Copy your resume link:", url);
+                      }}
+                      style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center" }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {currentStep === 1 && (
@@ -1058,12 +1290,33 @@ export function ApplicationFormPage() {
                   <div style={{ marginTop: 52 }}>
                     <SectionLabel>Supporting Documents</SectionLabel>
                     <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 20 }}>Accepted formats: JPG, PNG, PDF. Max 5MB per file.</p>
+                    {activeUploads > 0 && (
+                      <p style={{ color: "#C39529", fontSize: 12, marginBottom: 16 }}>
+                        {activeUploads === 1 ? "1 file uploading" : `${activeUploads} files uploading`} — please wait before continuing.
+                      </p>
+                    )}
                     <div className="upload-grid">
-                      <UploadBox title="Government Issued ID" subtitle="Passport, NIN card, Driver's Licence or PVC" name="governmentId" uploads={uploads} setUploads={setUploads} />
-                      <UploadBox title="Passport Photograph" subtitle="Recent clear photo, white background preferred" name="passport" uploads={uploads} setUploads={setUploads} />
-                      <UploadBox title="Bank Statement" subtitle="Most recent 12 months" name="bankStatement" uploads={uploads} setUploads={setUploads} />
-                      <UploadBox title="Payslip" subtitle="Recent salary payslip" name="payslip" uploads={uploads} setUploads={setUploads} />
-                      <UploadBox title="Proof of Residence" subtitle="Current utility bill or residence evidence" name="residence" uploads={uploads} setUploads={setUploads} />
+                      {(["governmentId", "passport", "bankStatement", "payslip", "residence"] as const).map((fieldName) => {
+                        const meta: Record<string, { title: string; subtitle: string }> = {
+                          governmentId: { title: "Government Issued ID", subtitle: "Passport, NIN card, Driver's Licence or PVC" },
+                          passport: { title: "Passport Photograph", subtitle: "Recent clear photo, white background preferred" },
+                          bankStatement: { title: "Bank Statement", subtitle: "Most recent 12 months" },
+                          payslip: { title: "Payslip", subtitle: "Recent salary payslip" },
+                          residence: { title: "Proof of Residence", subtitle: "Current utility bill or residence evidence" },
+                        };
+                        return (
+                          <UploadBox
+                            key={fieldName}
+                            title={meta[fieldName].title}
+                            subtitle={meta[fieldName].subtitle}
+                            name={fieldName}
+                            uploads={uploads}
+                            onUploaded={(n, f) => setUploads(u => ({ ...u, [n]: f }))}
+                            onUploadStart={() => setActiveUploads(c => c + 1)}
+                            onUploadEnd={() => setActiveUploads(c => Math.max(0, c - 1))}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 </>
@@ -1085,7 +1338,11 @@ export function ApplicationFormPage() {
                           type="button"
                           onClick={() => {
                             setSelectedCategory(group.category);
-                            if (!modelPicked) setValues((c) => ({ ...c, vehicleModel: "" }));
+                            setValues((c) => ({
+                              ...c,
+                              vehicleCategory: group.category,
+                              vehicleModel: modelPicked ? c.vehicleModel : "",
+                            }));
                           }}
                           style={{
                             position: "relative",
@@ -1279,16 +1536,23 @@ export function ApplicationFormPage() {
                 </>
               )}
 
+              {submitError && (
+                <div style={{ marginTop: 24, padding: "14px 18px", backgroundColor: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10 }}>
+                  <p style={{ color: "#ef4444", fontSize: 13, lineHeight: 1.7 }}>{submitError}</p>
+                </div>
+              )}
+
               <StepNav
                 currentStep={currentStep}
                 setStep={continueToStep}
                 submit={submitApplication}
-                canProceed={stepIsComplete(currentStep, values, consent)}
+                canProceed={stepIsComplete(currentStep, values, consent) && activeUploads === 0}
                 isContinuing={isContinuing}
                 isSubmitting={isSubmitting}
                 onBack={() => setStep(currentStep - 1)}
                 onCancel={() => setShowCancelModal(true)}
               />
+
             </>
           )}
         </div>
@@ -1484,7 +1748,7 @@ export function ApplicationFormPage() {
                 Keep Going
               </button>
               <button
-                onClick={() => window.location.assign("/credit-score?result=1")}
+                onClick={() => window.location.assign(creditScoreBackUrl)}
                 style={{
                   border: "1px solid #C39529",
                   background: "transparent",

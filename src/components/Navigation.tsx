@@ -98,6 +98,7 @@ export function Navigation() {
       `nord-scroll:${pathname}`,
       JSON.stringify({ x: window.scrollX, y: window.scrollY })
     );
+    window.dispatchEvent(new CustomEvent('nav:start'));
     router.push(href);
   };
 
@@ -203,7 +204,8 @@ export function Navigation() {
             height: 72,
           }}
         >
-          {/* Logo */}
+          {/* Logo + nav links grouped on the left */}
+          <div style={{ display: "flex", alignItems: "center", gap: 40, flex: 1, minWidth: 0 }}>
           <Link
             href="/"
             prefetch={false}
@@ -213,8 +215,8 @@ export function Navigation() {
             <NordFinanceLogo height={42} />
           </Link>
 
-          {/* Center nav links — hidden on mobile */}
-          <div className="nav-links" style={{ display: "flex", gap: 40, alignItems: "center" }}>
+          {/* Nav links — hidden on mobile */}
+          <div className="nav-links" style={{ display: "flex", gap: 36, alignItems: "center" }}>
             {navLinks.map((link) => {
               const isActive = navLinkIsActive(link);
               if ("dropdown" in link) {
@@ -286,9 +288,10 @@ export function Navigation() {
               );
             })}
           </div>
+          </div>{/* end left group */}
 
           {/* Right side */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Link
               href="/credit-score"
               prefetch={false}
@@ -300,7 +303,7 @@ export function Navigation() {
               style={{
                 fontFamily: "'Poppins', sans-serif",
                 fontWeight: 600,
-                fontSize: 13,
+                fontSize: 11,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: applyDisabled ? "rgba(255,255,255,0.3)" : "#000",
@@ -316,6 +319,39 @@ export function Navigation() {
               onMouseLeave={(e) => { if (!applyDisabled) (e.currentTarget.style.backgroundColor = "#C39529"); }}
             >
               Apply Now
+            </Link>
+
+            <Link
+              href="/status"
+              prefetch={false}
+              className="nav-track"
+              onClick={(event) => {
+                event.preventDefault();
+                navigateDocument("/status");
+              }}
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.8)",
+                textDecoration: "none",
+                border: `1px solid ${pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.28)"}`,
+                borderRadius: 100,
+                padding: "8px 18px",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#C39529";
+                e.currentTarget.style.borderColor = "#C39529";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.8)";
+                e.currentTarget.style.borderColor = pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.28)";
+              }}
+            >
+              Track Application
             </Link>
 
             {/* Hamburger label — toggles checkbox, mobile only */}
@@ -478,30 +514,52 @@ export function Navigation() {
         })}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center", marginTop: 8 }}>
-          <Link
-            href="/credit-score"
-            prefetch={false}
-            onClick={(event) => {
-              event.preventDefault();
-              if (!applyDisabled) navigateDocument("/credit-score");
-            }}
-            style={{
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 600,
-              fontSize: 13,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: applyDisabled ? "rgba(255,255,255,0.3)" : "#000",
-              textDecoration: "none",
-              backgroundColor: applyDisabled ? "rgba(255,255,255,0.1)" : "#C39529",
-              borderRadius: 100,
-              padding: "12px 38px",
-              pointerEvents: applyDisabled ? "none" : "auto",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Apply Now
-          </Link>
+          <div style={{ display: "flex", gap: 12 }}>
+            <Link
+              href="/credit-score"
+              prefetch={false}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!applyDisabled) navigateDocument("/credit-score");
+              }}
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 13,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: applyDisabled ? "rgba(255,255,255,0.3)" : "#000",
+                textDecoration: "none",
+                backgroundColor: applyDisabled ? "rgba(255,255,255,0.1)" : "#C39529",
+                borderRadius: 100,
+                padding: "12px 28px",
+                pointerEvents: applyDisabled ? "none" : "auto",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              Apply Now
+            </Link>
+            <Link
+              href="/status"
+              prefetch={false}
+              onClick={(event) => { event.preventDefault(); navigateDocument("/status"); }}
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 13,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.8)",
+                textDecoration: "none",
+                border: `1px solid ${pathname.startsWith("/status") ? "#C39529" : "rgba(255,255,255,0.28)"}`,
+                borderRadius: 100,
+                padding: "12px 28px",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              Track Application
+            </Link>
+          </div>
 
           {/* Social icons */}
           <div style={{ display: "flex", gap: 28, alignItems: "center", justifyContent: "center", marginTop: 28 }}>
@@ -672,6 +730,7 @@ export function Navigation() {
           .nav-links { display: none !important; }
           .nav-dropdown { display: none !important; }
           .nav-apply { display: none !important; }
+          .nav-track { display: none !important; }
           .nav-hamburger { display: flex !important; align-items: center; justify-content: center; }
           #nav-toggle:checked ~ .mobile-overlay { display: flex !important; }
           .back-to-top {

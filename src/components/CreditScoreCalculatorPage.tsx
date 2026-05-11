@@ -6,17 +6,24 @@ import Link from "next/link";
 import {
   calculateCreditScore,
   calculateCreditScoreCompletion,
-  creditScoreFieldKeys,
-  creditScoreSelectOptions,
   creditScoreSections,
+  defaultCreditScoreFormula,
+  defaultCreditScoreTiers,
   getApplicationUrl,
   getCreditScoreBreakdown,
+  getCreditScoreFieldKeys,
   getCreditScoreSignals,
   getCreditScoreTier,
   type CreditScoreBreakdown,
+  type CreditScoreFormConfig,
+  type CreditScoreFormulaConfig,
   type CreditScoreSignal,
+  type CreditScoreSliderField,
+  type CreditScoreSliderKey,
   type CreditScoreTier,
+  type CreditScoreTierConfig,
 } from "@/lib/creditScoreModel";
+import { saveCreditScore, getCreditScoreById } from "@/app/actions/credit-score";
 
 const DEBUG_BYPASS_SCORE_COMPLETION =
   process.env.NEXT_PUBLIC_BYPASS_COMPLETION === "true";
@@ -353,22 +360,102 @@ function ResultsPanel({
 
 const SESSION_KEY = "nord_credit_score_state";
 
-export function CreditScoreCalculatorPage() {
-  const [values, setValues] = useState<Record<string, number>>({});
+export type InitialCreditScoreResult = {
+  scoreId: string;
+  values: Record<string, number>;
+  monthlyIncome: number;
+  obligations: number;
+  downPayment: number;
+};
+
+function findSlider(formConfig: CreditScoreFormConfig, key: CreditScoreSliderKey): CreditScoreSliderField | undefined {
+  return formConfig.flatMap((section) => section.sliders ?? []).find((slider) => slider.key === key);
+}
+
+function formatSliderValue(slider: CreditScoreSliderField | undefined, value: number): string {
+  if (slider?.format === "currency") return `₦${value.toLocaleString("en-NG")}`;
+  if (slider?.format === "percent") return `${value}%`;
+  return value.toLocaleString("en-NG");
+}
+
+export function CreditScoreCalculatorPage({
+  formConfig = creditScoreSections,
+  formula = defaultCreditScoreFormula,
+  tiers = defaultCreditScoreTiers,
+  initialResult = null,
+  hideHero = false,
+}: {
+  formConfig?: CreditScoreFormConfig;
+  formula?: CreditScoreFormulaConfig;
+  tiers?: CreditScoreTierConfig[];
+  initialResult?: InitialCreditScoreResult | null;
+  hideHero?: boolean;
+}) {
+  const incomeSlider = findSlider(formConfig, "monthlyIncome");
+  const obligationsSlider = findSlider(formConfig, "obligations");
+  const downPaymentSlider = findSlider(formConfig, "downPayment");
+  const [values, setValues] = useState<Record<string, number>>(initialResult?.values ?? {});
   const [identity, setIdentity] = useState({ firstName: "", lastName: "", email: "" });
-  const [monthlyIncome, setMonthlyIncome] = useState(0);
-  const [obligations, setObligations] = useState(0);
-  const [downPayment, setDownPayment] = useState(30);
-  const [incomeDisplay, setIncomeDisplay] = useState('--');
-  const [obligationsDisplay, setObligationsDisplay] = useState('--');
-  const [downPayDisplay, setDownPayDisplay] = useState('30%');
-  const [resultRevealed, setResultRevealed] = useState(false);
+  const [monthlyIncome, setMonthlyIncome] = useState(initialResult?.monthlyIncome ?? incomeSlider?.defaultValue ?? 0);
+  const [obligations, setObligations] = useState(initialResult?.obligations ?? obligationsSlider?.defaultValue ?? 0);
+  const [downPayment, setDownPayment] = useState(initialResult?.downPayment ?? downPaymentSlider?.defaultValue ?? 30);
+  const [incomeDisplay, setIncomeDisplay] = useState(formatSliderValue(incomeSlider, initialResult?.monthlyIncome ?? incomeSlider?.defaultValue ?? 0));
+  const [obligationsDisplay, setObligationsDisplay] = useState(formatSliderValue(obligationsSlider, initialResult?.obligations ?? obligationsSlider?.defaultValue ?? 0));
+  const [downPayDisplay, setDownPayDisplay] = useState(formatSliderValue(downPaymentSlider, initialResult?.downPayment ?? downPaymentSlider?.defaultValue ?? 30));
+  const [resultRevealed, setResultRevealed] = useState(Boolean(initialResult));
   const [isCalculating, setIsCalculating] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [scoreId, setScoreId] = useState<string | null>(initialResult?.scoreId ?? null);
 
-  // Restore state from sessionStorage when landing on ?result=1
+  // Restore state from URL params (?scoreId=<id> or legacy ?result=1)
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("result") !== "1") return;
+    if (initialResult) {
+      try {
+        const saved = sessionStorage.getItem(SESSION_KEY);
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (s.identity) setIdentity(s.identity);
+        }
+      } catch {}
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const urlScoreId = params.get("scoreId");
+    const isLegacyResult = params.get("result") === "1";
+
+    if (!urlScoreId && !isLegacyResult) return;
+
+    // Try to restore identity from sessionStorage regardless of mode
+    const restoreIdentityFromSession = () => {
+      try {
+        const saved = sessionStorage.getItem(SESSION_KEY);
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (s.identity) setIdentity(s.identity);
+          if (s.creditScoreId) setScoreId(s.creditScoreId);
+        }
+      } catch {}
+    };
+
+    if (urlScoreId) {
+      setScoreId(urlScoreId);
+      getCreditScoreById(urlScoreId).then((result) => {
+        if ("error" in result) return;
+        if (result.formResponses && Object.keys(result.formResponses).length) setValues(result.formResponses);
+        setMonthlyIncome(result.monthlyIncome);
+        setIncomeDisplay(formatSliderValue(incomeSlider, result.monthlyIncome));
+        setObligations(result.obligations);
+        setObligationsDisplay(formatSliderValue(obligationsSlider, result.obligations));
+        setDownPayment(result.downPayment);
+        setDownPayDisplay(formatSliderValue(downPaymentSlider, result.downPayment));
+        restoreIdentityFromSession();
+        setResultRevealed(true);
+      }).catch(() => {});
+      return;
+    }
+
+    // Legacy ?result=1 — restore from sessionStorage
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
       if (!saved) return;
@@ -376,8 +463,12 @@ export function CreditScoreCalculatorPage() {
       if (s.values)       setValues(s.values);
       if (s.identity)     setIdentity(s.identity);
       if (s.monthlyIncome !== undefined) setMonthlyIncome(s.monthlyIncome);
+      if (s.monthlyIncome !== undefined) setIncomeDisplay(formatSliderValue(incomeSlider, s.monthlyIncome));
       if (s.obligations   !== undefined) setObligations(s.obligations);
+      if (s.obligations   !== undefined) setObligationsDisplay(formatSliderValue(obligationsSlider, s.obligations));
       if (s.downPayment   !== undefined) setDownPayment(s.downPayment);
+      if (s.downPayment   !== undefined) setDownPayDisplay(formatSliderValue(downPaymentSlider, s.downPayment));
+      if (s.creditScoreId) setScoreId(s.creditScoreId);
       setResultRevealed(true);
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -402,7 +493,7 @@ export function CreditScoreCalculatorPage() {
       incomeEl.oninput = () => {
         const v = Number(incomeEl.value);
         flushSync(() => {
-          setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
+          setIncomeDisplay(formatSliderValue(incomeSlider, v));
           setMonthlyIncome(v);
           setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
           setResultRevealed(false);
@@ -416,7 +507,7 @@ export function CreditScoreCalculatorPage() {
       obligationsEl.oninput = () => {
         const v = Number(obligationsEl.value);
         flushSync(() => {
-          setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
+          setObligationsDisplay(formatSliderValue(obligationsSlider, v));
           setObligations(v);
           setTouchedSliders(cur => ({ ...cur, obligations: true }));
           setResultRevealed(false);
@@ -430,7 +521,7 @@ export function CreditScoreCalculatorPage() {
       downPayEl.oninput = () => {
         const v = Number(downPayEl.value);
         flushSync(() => {
-          setDownPayDisplay(`${v}%`);
+          setDownPayDisplay(formatSliderValue(downPaymentSlider, v));
           setDownPayment(v);
           setResultRevealed(false);
           setIsCalculating(false);
@@ -438,36 +529,40 @@ export function CreditScoreCalculatorPage() {
         if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
       };
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [downPaymentSlider, incomeSlider, obligationsSlider]);
 
-  const completedSelects = creditScoreFieldKeys.filter((key) => values[key] !== undefined).length;
+  const fieldKeys = useMemo(() => getCreditScoreFieldKeys(formConfig), [formConfig]);
+  const completedSelects = fieldKeys.filter((key) => values[key] !== undefined).length;
   const identityComplete = Boolean(identity.firstName.trim() && identity.lastName.trim() && identity.email.trim());
 
   const score = useMemo(
-    () => calculateCreditScore({ values, monthlyIncome, obligations, downPayment }),
-    [downPayment, monthlyIncome, obligations, values]
+    () => calculateCreditScore({ values, monthlyIncome, obligations, downPayment, formConfig, formula }),
+    [downPayment, formConfig, formula, monthlyIncome, obligations, values]
   );
 
-  const completion = calculateCreditScoreCompletion({ completedSelects, identityComplete });
+  const completion = calculateCreditScoreCompletion({ completedSelects, identityComplete, formConfig });
   const canCalculate = DEBUG_BYPASS_SCORE_COMPLETION || completion >= 70;
   const showResult = canCalculate && resultRevealed;
-  const tier = getCreditScoreTier(score);
-  const breakdown = useMemo(() => getCreditScoreBreakdown(values), [values]);
+  const tier = getCreditScoreTier(score, tiers);
+  const breakdown = useMemo(() => getCreditScoreBreakdown(values, formConfig), [formConfig, values]);
   const signals = useMemo(
     () => getCreditScoreSignals({ score, values, monthlyIncome, obligations, downPayment }),
     [downPayment, monthlyIncome, obligations, score, values]
   );
+  const employmentTypeLabel = formConfig
+    .flatMap((section) => section.fields)
+    .find((field) => field.key === "employmentType")
+    ?.options.find((option) => option.value === values.employmentType)?.label;
   const applicationUrl = getApplicationUrl({
     score,
     tier: tier.name,
     firstName: identity.firstName.trim(),
     lastName: identity.lastName.trim(),
     email: identity.email.trim(),
-    employmentType: values.employmentType !== undefined
-      ? creditScoreSelectOptions.employmentType.find((option) => option.value === values.employmentType)?.label
-      : undefined,
+    employmentType: values.employmentType !== undefined ? employmentTypeLabel : undefined,
     monthlyIncome,
     downPayment,
+    scoreId: scoreId ?? undefined,
   });
   const hasPreview =
     completedSelects > 0 ||
@@ -499,10 +594,19 @@ export function CreditScoreCalculatorPage() {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ values, identity, monthlyIncome, obligations, downPayment }));
     } catch {}
     setIsCalculating(true);
-    calculationTimerRef.current = setTimeout(() => {
+    calculationTimerRef.current = setTimeout(async () => {
       setResultRevealed(true);
       setIsCalculating(false);
       calculationTimerRef.current = null;
+      // Persist score to DB in the background; store the ID so the application form can link to it
+      const result = await saveCreditScore({ score, values, monthlyIncome, obligations, downPayment, identity });
+      if ("id" in result) {
+        setScoreId(result.id);
+        try {
+          const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "{}");
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...saved, creditScoreId: result.id }));
+        } catch {}
+      }
     }, 900);
   };
 
@@ -539,22 +643,45 @@ export function CreditScoreCalculatorPage() {
   }, [scrollToResultStack, showResult]);
 
   useEffect(() => {
-    if (!resultRevealed) return;
-    const params = new URLSearchParams(window.location.search);
-    params.set("result", "1");
-    window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [resultRevealed]);
+    if (!resultRevealed || !scoreId) return;
+    const resultPath = `/credit-score/results/${scoreId}`;
+    if (window.location.pathname !== resultPath) {
+      window.history.replaceState(null, "", resultPath);
+    }
+  }, [resultRevealed, scoreId]);
 
   const editDetails = () => {
     setResultRevealed(false);
-    const params = new URLSearchParams(window.location.search);
-    params.delete("result");
-    const query = params.toString();
-    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+    window.history.replaceState(null, "", "/credit-score");
     requestAnimationFrame(() => {
       scrollToResultStack();
     });
   };
+
+  const getSliderState = (key: CreditScoreSliderKey) => {
+    if (key === "monthlyIncome") return { value: monthlyIncome, display: incomeDisplay, ref: incomeInputRef };
+    if (key === "obligations") return { value: obligations, display: obligationsDisplay, ref: obligationsInputRef };
+    return { value: downPayment, display: downPayDisplay, ref: downPayInputRef };
+  };
+
+  const setSliderValue = (slider: CreditScoreSliderField, value: number) => {
+    if (slider.key === "monthlyIncome") {
+      setIncomeDisplay(formatSliderValue(slider, value));
+      setMonthlyIncome(value);
+      setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
+    } else if (slider.key === "obligations") {
+      setObligationsDisplay(formatSliderValue(slider, value));
+      setObligations(value);
+      setTouchedSliders(cur => ({ ...cur, obligations: true }));
+    } else {
+      setDownPayDisplay(formatSliderValue(slider, value));
+      setDownPayment(value);
+    }
+    setResultRevealed(false);
+    setIsCalculating(false);
+    if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
+  };
+  const shouldHideHero = hideHero || showResult;
 
   return (
     <main style={{ paddingTop: 72, backgroundColor: "#000" }}>
@@ -668,69 +795,71 @@ export function CreditScoreCalculatorPage() {
           </div>
         </div>
       )}
-      <section
-        style={{
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
-          background:
-            "radial-gradient(circle at 16% 18%, rgba(195,149,41,0.13), transparent 28%), linear-gradient(180deg, #111 0%, #050505 100%)",
-        }}
-      >
-        <div
+      {!shouldHideHero && (
+        <section
           style={{
-            maxWidth: 1440,
-            margin: "0 auto",
-            padding: "96px 80px 72px",
-            display: "grid",
-            gridTemplateColumns: "1fr 420px",
-            gap: 72,
-            alignItems: "end",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background:
+              "radial-gradient(circle at 16% 18%, rgba(195,149,41,0.13), transparent 28%), linear-gradient(180deg, #111 0%, #050505 100%)",
           }}
-          className="score-hero"
         >
-          <div>
-            <div className="score-hero-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
-              <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
-              <span style={{ fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529", fontWeight: 500 }}>
-                Nord Credit Score
-              </span>
+          <div
+            style={{
+              maxWidth: 1440,
+              margin: "0 auto",
+              padding: "96px 80px 72px",
+              display: "grid",
+              gridTemplateColumns: "1fr 420px",
+              gap: 72,
+              alignItems: "end",
+            }}
+            className="score-hero"
+          >
+            <div>
+              <div className="score-hero-eyebrow" style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+                <span style={{ color: "#C39529", fontWeight: 700, fontSize: 12 }}>//</span>
+                <span style={{ fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "#C39529", fontWeight: 500 }}>
+                  Nord Credit Score
+                </span>
+              </div>
+              <h1
+                className="score-hero-title"
+                style={{
+                  fontFamily: "'Morpha', Georgia, serif",
+                  fontWeight: 400,
+                  fontSize: "clamp(44px, 5vw, 78px)",
+                  lineHeight: 1.02,
+                  letterSpacing: "-0.03em",
+                  color: "white",
+                  maxWidth: 720,
+                }}
+              >
+                Check your score. <br />
+                <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Know your tier.</em>
+              </h1>
             </div>
-            <h1
-              className="score-hero-title"
+            <p
+              className="score-hero-copy"
               style={{
-                fontFamily: "'Morpha', Georgia, serif",
-                fontWeight: 400,
-                fontSize: "clamp(44px, 5vw, 78px)",
-                lineHeight: 1.02,
-                letterSpacing: "-0.03em",
-                color: "white",
-                maxWidth: 720,
+                fontSize: 15,
+                lineHeight: 1.9,
+                color: "rgba(255,255,255,0.48)",
+                maxWidth: 410,
+                marginLeft: "auto",
               }}
             >
-              Check your score. <br />
-              <em style={{ fontStyle: "normal", fontWeight: "bold" }}>Know your tier.</em>
-            </h1>
+              Start with your Nord Credit Score to see your likely tier, rate, tenure, and down-payment range. Once your result is ready, you can continue to the full application with your score carried forward.
+            </p>
           </div>
-          <p
-            className="score-hero-copy"
-            style={{
-              fontSize: 15,
-              lineHeight: 1.9,
-              color: "rgba(255,255,255,0.48)",
-              maxWidth: 410,
-              marginLeft: "auto",
-            }}
-          >
-            Start with your Nord Credit Score to see your likely tier, rate, tenure, and down-payment range. Once your result is ready, you can continue to the full application with your score carried forward.
-          </p>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section ref={formSectionRef}>
         <div
           style={{
             maxWidth: 1440,
             margin: "0 auto",
-            padding: "72px 80px 120px",
+            padding: shouldHideHero ? "56px 80px 120px" : "72px 80px 120px",
             display: "grid",
             gridTemplateColumns: "minmax(0, 1fr) 440px",
             gap: 64,
@@ -800,95 +929,33 @@ export function CreditScoreCalculatorPage() {
               />
             </div>
 
-            {creditScoreSections.map((section) => (
+            {formConfig.map((section) => (
               <div key={section.title} style={{ marginBottom: 54 }}>
                 <SectionHeader title={section.title} weight={section.weight} />
 
-                {section.title === "Income Stability" && (
-                  <div style={{ marginBottom: 24 }}>
-                    <FieldLabel>Monthly Net Income (₦)</FieldLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{incomeDisplay}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦100M+</span>
+                {(section.sliders ?? []).map((slider) => {
+                  const sliderState = getSliderState(slider.key);
+                  return (
+                    <div key={slider.key} style={{ marginBottom: 24 }}>
+                      <FieldLabel>{slider.label}</FieldLabel>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>{slider.minLabel}</span>
+                        <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{sliderState.display}</span>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>{slider.maxLabel}</span>
+                      </div>
+                      <input
+                        ref={sliderState.ref}
+                        type="range"
+                        min={slider.min}
+                        max={slider.max}
+                        step={slider.step}
+                        value={sliderState.value}
+                        className="score-range"
+                        onChange={(e) => setSliderValue(slider, Number(e.target.value))}
+                      />
                     </div>
-                    <input
-                      ref={incomeInputRef}
-                      type="range"
-                      min={0}
-                      max={100000000}
-                      step={250000}
-                      defaultValue={0}
-                      className="score-range"
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        setIncomeDisplay(`₦${v.toLocaleString('en-NG')}`);
-                        setMonthlyIncome(v);
-                        setTouchedSliders(cur => ({ ...cur, monthlyIncome: true }));
-                        setResultRevealed(false);
-                        setIsCalculating(false);
-                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
-                      }}
-                    />
-                  </div>
-                )}
-
-                {section.title === "Debt-to-Income Ratio" && (
-                  <div style={{ marginBottom: 24 }}>
-                    <FieldLabel>Existing Monthly Obligations (₦)</FieldLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>₦0</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{obligationsDisplay}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>₦5M+</span>
-                    </div>
-                    <input
-                      ref={obligationsInputRef}
-                      type="range"
-                      min={0}
-                      max={5000000}
-                      step={100000}
-                      defaultValue={0}
-                      className="score-range"
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        setObligationsDisplay(`₦${v.toLocaleString('en-NG')}`);
-                        setObligations(v);
-                        setTouchedSliders(cur => ({ ...cur, obligations: true }));
-                        setResultRevealed(false);
-                        setIsCalculating(false);
-                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
-                      }}
-                    />
-                  </div>
-                )}
-
-                {section.title === "Down Payment Strength" && (
-                  <div style={{ marginBottom: 24 }}>
-                    <FieldLabel>Down Payment Percentage</FieldLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>0%</span>
-                      <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, color: "#C39529", fontSize: 24 }}>{downPayDisplay}</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)", textAlign: "right" }}>70%+</span>
-                    </div>
-                    <input
-                      ref={downPayInputRef}
-                      type="range"
-                      min={0}
-                      max={70}
-                      step={5}
-                      defaultValue={30}
-                      className="score-range"
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        setDownPayDisplay(`${v}%`);
-                        setDownPayment(v);
-                        setResultRevealed(false);
-                        setIsCalculating(false);
-                        if (calculationTimerRef.current) { clearTimeout(calculationTimerRef.current); calculationTimerRef.current = null; }
-                      }}
-                    />
-                  </div>
-                )}
+                  );
+                })}
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 20px" }} className="score-field-grid">
                   {section.fields.map((field) => (

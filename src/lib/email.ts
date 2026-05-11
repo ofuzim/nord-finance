@@ -1,0 +1,121 @@
+import nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT ?? 465),
+  secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for 587
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
+
+const FROM = `Nord Finance <${process.env.SMTP_FROM ?? process.env.SMTP_USER}>`
+
+// Email-safe header using table layout (flexbox is stripped by Gmail/Outlook)
+const EMAIL_HEADER = `
+  <div style="background:#0a0a0a;padding:24px 32px;border-radius:8px 8px 0 0;">
+    <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 812" width="22" height="38" style="display:block;">
+            <path fill="#C39529" d="M449.02,262.97s-9.98-31.01-37.85-70.89c-27.87-39.87-54.76-60.6-54.76-60.6,0,0-34.17,3.73-66.15,63.17-14.86,27.63-15.01,89.18-15.01,122.62,0,215.67-2.31,325.28-2.31,325.28l-12.58,11.43s-1.27-228.24,5.25-402.33c1.87-49.88,22.78-82.17,27.22-88.3,23.99-33.16,59.17-46.73,59.17-46.73,0,0-17.15-28.73-51.88-60.03C274.45,33.45,224.81,0,224.81,0c0,0-42.59,25.73-76.89,58.31-34.3,32.59-48.45,57.88-48.45,57.88,0,0,32.34,14.35,54.02,40.73,17.33,21.09,28.3,56.6,29.88,76.3,4.72,25.3,8.71,421.48,8.71,421.48l-12.4-12.65s-5.17-163.55-6.07-287.9c-.86-118.34-3.86-138.4-13.68-159.07-18.15-47.31-65.34-64.74-65.34-64.74,0,0-31.13,23.58-57.77,63.28C13.69,228.09,0,261.54,0,261.54l54.57,34.59S3.86,388.45,16.29,534.65c5.63,66.21,39.63,164.32,85.32,213.52,55.2,59.44,102.81,63.6,123.2,63.6,20.39,0,54.13,1.15,105.76-43.45,41.57-35.92,80.65-107.8,95.18-185.65,32.59-174.5-25.89-289.98-25.89-289.98l49.16-29.73ZM358.01,652.27c-51.58,119.03-133.2,111.48-133.2,111.48,0,0-83.04,11.48-137.35-122-69.75-149.87,1.72-321.56,1.72-321.56,0,0,14.94,13.34,27.44,30.3,9.66,13.1,19.29,36.33,23.32,55.41,14.27,67.51,13.98,234.38,13.98,234.38l70.89,71.17,72.31-70.32s-1.75-180.43,16.44-240.34c6.02-19.84,13.45-37.91,20.15-49.88,12.01-21.44,29.87-32.16,29.87-32.16,0,0,72.46,153.45-5.57,333.52Z"/>
+          </svg>
+        </td>
+        <td style="vertical-align:middle;">
+          <span style="color:#ffffff;font-size:20px;font-weight:700;font-family:sans-serif;letter-spacing:-0.3px;">Nord Finance</span>
+        </td>
+      </tr>
+    </table>
+  </div>`
+
+export async function sendApplicationConfirmation({
+  to,
+  firstName,
+  referenceNumber,
+}: {
+  to: string
+  firstName: string
+  referenceNumber: string
+}) {
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: `Your Nord Finance Application — Ref: ${referenceNumber}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
+        ${EMAIL_HEADER}
+        <div style="border: 1px solid #e5e5e5; border-top: none; padding: 32px; border-radius: 0 0 8px 8px;">
+          <p style="margin-top: 0;">Hi ${firstName},</p>
+          <p>Thank you for submitting your application. We have received your information and our team will review it shortly.</p>
+
+          <div style="background: #f5f5f5; border-radius: 6px; padding: 16px 24px; margin: 24px 0;">
+            <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Reference Number</p>
+            <p style="margin: 4px 0 0; font-size: 24px; font-weight: 700; letter-spacing: 2px;">${referenceNumber}</p>
+          </div>
+
+          <p>Keep this reference number safe. You can use it to check your application status on our website at any time.</p>
+          <p>We typically process applications within <strong>2–3 business days</strong>. You will receive an email update when your status changes.</p>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
+          <p style="color: #666; font-size: 13px; margin-bottom: 0;">
+            If you have any questions, reply to this email or contact us directly.<br />
+            Nord Finance — Asset Finance Solutions
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+export async function sendStatusUpdateEmail({
+  to,
+  firstName,
+  referenceNumber,
+  newStatus,
+  note,
+}: {
+  to: string
+  firstName: string
+  referenceNumber: string
+  newStatus: string
+  note?: string
+}) {
+  const statusLabels: Record<string, string> = {
+    under_review: 'Under Review',
+    approved: 'Approved',
+    rejected: 'Not Approved',
+    withdrawn: 'Withdrawn',
+  }
+
+  const label = statusLabels[newStatus] ?? newStatus
+
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: `Application Update — ${label} | Ref: ${referenceNumber}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
+        ${EMAIL_HEADER}
+        <div style="border: 1px solid #e5e5e5; border-top: none; padding: 32px; border-radius: 0 0 8px 8px;">
+          <p style="margin-top: 0;">Hi ${firstName},</p>
+          <p>There has been an update on your application (Ref: <strong>${referenceNumber}</strong>).</p>
+
+          <div style="background: #f5f5f5; border-radius: 6px; padding: 16px 24px; margin: 24px 0;">
+            <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;">New Status</p>
+            <p style="margin: 4px 0 0; font-size: 20px; font-weight: 700;">${label}</p>
+          </div>
+
+          ${note ? `<p><strong>Note from our team:</strong> ${note}</p>` : ''}
+
+          <p>If you have questions about this update, please contact us with your reference number.</p>
+
+          <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
+          <p style="color: #666; font-size: 13px; margin-bottom: 0;">
+            Nord Finance — Asset Finance Solutions
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}

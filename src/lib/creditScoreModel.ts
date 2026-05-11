@@ -3,16 +3,62 @@ export type CreditScoreOption = {
   value: number;
 };
 
-export type CreditScoreSelectField = {
+export type CreditScoreFormOption = CreditScoreOption;
+
+export type CreditScoreFormField = {
   key: string;
   label: string;
-  options: CreditScoreOption[];
+  options: CreditScoreFormOption[];
 };
 
-export type CreditScoreSection = {
+export type CreditScoreSliderKey = "monthlyIncome" | "obligations" | "downPayment";
+
+export type CreditScoreSliderField = {
+  key: CreditScoreSliderKey;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  minLabel: string;
+  maxLabel: string;
+  format: "currency" | "percent" | "number";
+};
+
+export type CreditScoreSelectField = CreditScoreFormField;
+
+export type CreditScoreFormSection = {
+  id: string;
   title: string;
   weight: string;
-  fields: CreditScoreSelectField[];
+  sliders?: CreditScoreSliderField[];
+  fields: CreditScoreFormField[];
+};
+
+export type CreditScoreSection = CreditScoreFormSection;
+
+export type CreditScoreFormConfig = CreditScoreFormSection[];
+
+export type CreditScoreFormulaConfig = {
+  base_score: number;
+  multiplier: number;
+  income_boost_max: number;
+  income_boost_divisor: number;
+  down_payment_boost_max: number;
+  down_payment_boost_divisor: number;
+  obligation_penalty_max: number;
+  obligation_penalty_divisor: number;
+  min_score: number;
+  max_score: number;
+};
+
+export type CreditScoreTierConfig = {
+  name: string;
+  label: string;
+  min_score: number;
+  interest_rate: number;
+  max_tenor_months: number;
+  min_down_payment: number;
 };
 
 export type CreditScoreTier = {
@@ -44,43 +90,24 @@ export type CreditScoreSignal = {
   text: string;
 };
 
-const factorDefinitions = [
-  {
-    key: "income",
-    name: "Income Stability",
-    weight: 0.25,
-    fieldKeys: ["employmentType", "employmentDuration", "incomeSources", "incomeDocumentation"],
-  },
-  {
-    key: "cashflow",
-    name: "Cashflow",
-    weight: 0.2,
-    fieldKeys: ["monthlyCredits", "overdraftHistory", "savingsBehaviour", "endOfMonthBalance"],
-  },
-  {
-    key: "dti",
-    name: "Debt / Income",
-    weight: 0.2,
-    fieldKeys: ["activeLoanCount", "repaymentHistory"],
-  },
-  {
-    key: "banking",
-    name: "Banking",
-    weight: 0.15,
-    fieldKeys: ["activeBankAccounts", "transactionFrequency", "bankRelationshipAge", "internationalTransactions"],
-  },
-  {
-    key: "digital",
-    name: "Digital",
-    weight: 0.1,
-    fieldKeys: ["digitalLendingHistory", "bvnNinStatus", "investmentActivity", "fintechUsage"],
-  },
-  {
-    key: "downpay",
-    name: "Down Payment",
-    weight: 0.1,
-    fieldKeys: ["downPaymentSource", "downPaymentReadiness"],
-  },
+export const defaultCreditScoreFormula: CreditScoreFormulaConfig = {
+  base_score: 520,
+  multiplier: 3.2,
+  income_boost_max: 46,
+  income_boost_divisor: 100000000,
+  down_payment_boost_max: 54,
+  down_payment_boost_divisor: 70,
+  obligation_penalty_max: 34,
+  obligation_penalty_divisor: 5000000,
+  min_score: 520,
+  max_score: 910,
+};
+
+export const defaultCreditScoreTiers: CreditScoreTierConfig[] = [
+  { name: "private_bridge", label: "Private Bridge", min_score: 850, interest_rate: 9, max_tenor_months: 6, min_down_payment: 50 },
+  { name: "premium", label: "Premium Tier", min_score: 800, interest_rate: 18, max_tenor_months: 12, min_down_payment: 40 },
+  { name: "core", label: "Core Tier", min_score: 700, interest_rate: 22, max_tenor_months: 24, min_down_payment: 30 },
+  { name: "access", label: "Access Tier", min_score: 0, interest_rate: 28, max_tenor_months: 48, min_down_payment: 30 },
 ];
 
 export const creditScoreSelectOptions = {
@@ -207,8 +234,22 @@ export const creditScoreSelectOptions = {
 
 export const creditScoreSections: CreditScoreSection[] = [
   {
+    id: "income_stability",
     title: "Income Stability",
     weight: "25%",
+    sliders: [
+      {
+        key: "monthlyIncome",
+        label: "Monthly Net Income (₦)",
+        min: 0,
+        max: 100000000,
+        step: 250000,
+        defaultValue: 0,
+        minLabel: "₦0",
+        maxLabel: "₦100M+",
+        format: "currency",
+      },
+    ],
     fields: [
       { key: "employmentType", label: "Employment Type", options: creditScoreSelectOptions.employmentType },
       { key: "employmentDuration", label: "Employment Duration", options: creditScoreSelectOptions.employmentDuration },
@@ -217,6 +258,7 @@ export const creditScoreSections: CreditScoreSection[] = [
     ],
   },
   {
+    id: "cashflow_consistency",
     title: "Cashflow Consistency",
     weight: "20%",
     fields: [
@@ -227,14 +269,29 @@ export const creditScoreSections: CreditScoreSection[] = [
     ],
   },
   {
+    id: "debt_to_income",
     title: "Debt-to-Income Ratio",
     weight: "20%",
+    sliders: [
+      {
+        key: "obligations",
+        label: "Existing Monthly Obligations (₦)",
+        min: 0,
+        max: 5000000,
+        step: 100000,
+        defaultValue: 0,
+        minLabel: "₦0",
+        maxLabel: "₦5M+",
+        format: "currency",
+      },
+    ],
     fields: [
       { key: "activeLoanCount", label: "Active Loan Count", options: creditScoreSelectOptions.activeLoanCount },
       { key: "repaymentHistory", label: "Repayment History", options: creditScoreSelectOptions.repaymentHistory },
     ],
   },
   {
+    id: "banking_behaviour",
     title: "Banking Behaviour",
     weight: "15%",
     fields: [
@@ -245,6 +302,7 @@ export const creditScoreSections: CreditScoreSection[] = [
     ],
   },
   {
+    id: "digital_footprint",
     title: "Digital Footprint",
     weight: "10%",
     fields: [
@@ -255,8 +313,22 @@ export const creditScoreSections: CreditScoreSection[] = [
     ],
   },
   {
+    id: "down_payment_strength",
     title: "Down Payment Strength",
     weight: "10%",
+    sliders: [
+      {
+        key: "downPayment",
+        label: "Down Payment Percentage",
+        min: 0,
+        max: 70,
+        step: 5,
+        defaultValue: 30,
+        minLabel: "0%",
+        maxLabel: "70%+",
+        format: "percent",
+      },
+    ],
     fields: [
       { key: "downPaymentSource", label: "Source of Down Payment", options: creditScoreSelectOptions.downPaymentSource },
       { key: "downPaymentReadiness", label: "Down Payment Readiness", options: creditScoreSelectOptions.downPaymentReadiness },
@@ -264,21 +336,168 @@ export const creditScoreSections: CreditScoreSection[] = [
   },
 ];
 
+export const defaultCreditScoreForm: CreditScoreFormConfig = creditScoreSections;
+
 export const creditScoreFieldKeys = creditScoreSections.flatMap((section) =>
   section.fields.map((field) => field.key)
 );
 
-export function getCreditScoreTier(score: number): CreditScoreTier {
-  if (score >= 850) {
-    return { name: "Private Bridge", color: "#9ca3af", rate: "from 9% p.a.", maxTenure: "6 months", minDownPayment: "50%", note: "You're in our highest tier — reserved for top-performing financial profiles" };
-  }
-  if (score >= 800) {
-    return { name: "Premium Tier", color: "#a855f7", rate: "18% p.a.", maxTenure: "12 months", minDownPayment: "40%", note: "You have a strong financial profile with a low risk of default" };
-  }
-  if (score >= 700) {
-    return { name: "Core Tier", color: "#38bdf8", rate: "22% p.a.", maxTenure: "12–24 months", minDownPayment: "30%", note: "You have a solid credit profile and good repayment history" };
-  }
-  return { name: "Access Tier", color: "#22c55e", rate: "28%+ p.a.", maxTenure: "12–48 months", minDownPayment: "30%", note: "You meet our financing criteria and qualify for vehicle credit" };
+function sectionWeightToNumber(weight: string): number {
+  const parsed = Number(String(weight).replace("%", ""));
+  if (!Number.isFinite(parsed)) return 0;
+  return parsed > 1 ? parsed / 100 : parsed;
+}
+
+export function getCreditScoreFieldKeys(formConfig: CreditScoreFormConfig = defaultCreditScoreForm): string[] {
+  return formConfig.flatMap((section) => section.fields.map((field) => field.key));
+}
+
+export function normalizeCreditScoreFormConfig(value: unknown): CreditScoreFormConfig {
+  if (!Array.isArray(value)) return defaultCreditScoreForm;
+
+  const sections = value
+    .map((section, sectionIndex) => {
+      if (!section || typeof section !== "object") return null;
+      const rawSection = section as Record<string, unknown>;
+      const title = typeof rawSection.title === "string" && rawSection.title.trim()
+        ? rawSection.title.trim()
+        : `Section ${sectionIndex + 1}`;
+      const id = typeof rawSection.id === "string" && rawSection.id.trim()
+        ? rawSection.id.trim()
+        : title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `section_${sectionIndex + 1}`;
+      const weight = typeof rawSection.weight === "string" && rawSection.weight.trim()
+        ? rawSection.weight.trim()
+        : "0%";
+      const defaultSliders = defaultCreditScoreForm.find((section) => section.id === id)?.sliders;
+      const sliders = Array.isArray(rawSection.sliders)
+        ? rawSection.sliders
+            .map((slider) => {
+              if (!slider || typeof slider !== "object") return null;
+              const rawSlider = slider as Record<string, unknown>;
+              const key = rawSlider.key;
+              if (key !== "monthlyIncome" && key !== "obligations" && key !== "downPayment") return null;
+              const label = typeof rawSlider.label === "string" && rawSlider.label.trim()
+                ? rawSlider.label.trim()
+                : key;
+              const min = Number(rawSlider.min);
+              const max = Number(rawSlider.max);
+              const step = Number(rawSlider.step);
+              const defaultValue = Number(rawSlider.defaultValue);
+              const format = rawSlider.format === "currency" || rawSlider.format === "percent" || rawSlider.format === "number"
+                ? rawSlider.format
+                : "number";
+              if (![min, max, step, defaultValue].every(Number.isFinite)) return null;
+              return {
+                key,
+                label,
+                min,
+                max,
+                step,
+                defaultValue,
+                minLabel: typeof rawSlider.minLabel === "string" ? rawSlider.minLabel : String(min),
+                maxLabel: typeof rawSlider.maxLabel === "string" ? rawSlider.maxLabel : String(max),
+                format,
+              };
+            })
+            .filter((slider): slider is CreditScoreSliderField => Boolean(slider))
+        : defaultSliders;
+      const fields = Array.isArray(rawSection.fields)
+        ? rawSection.fields
+            .map((field, fieldIndex) => {
+              if (!field || typeof field !== "object") return null;
+              const rawField = field as Record<string, unknown>;
+              const label = typeof rawField.label === "string" && rawField.label.trim()
+                ? rawField.label.trim()
+                : `Question ${fieldIndex + 1}`;
+              const key = typeof rawField.key === "string" && rawField.key.trim()
+                ? rawField.key.trim()
+                : label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `field_${fieldIndex + 1}`;
+              const options = Array.isArray(rawField.options)
+                ? rawField.options
+                    .map((option) => {
+                      if (!option || typeof option !== "object") return null;
+                      const rawOption = option as Record<string, unknown>;
+                      const optionLabel = typeof rawOption.label === "string" ? rawOption.label.trim() : "";
+                      const optionValue = Number(rawOption.value);
+                      if (!optionLabel || !Number.isFinite(optionValue)) return null;
+                      return { label: optionLabel, value: optionValue };
+                    })
+                    .filter((option): option is CreditScoreFormOption => Boolean(option))
+                : [];
+              return { key, label, options };
+            })
+            .filter((field): field is CreditScoreFormField => Boolean(field))
+        : [];
+      return { id, title, weight, ...(sliders ? { sliders } : {}), fields };
+    })
+    .filter((section): section is CreditScoreFormSection => Boolean(section));
+
+  return sections.length ? sections : defaultCreditScoreForm;
+}
+
+export function normalizeCreditScoreFormula(value: unknown): CreditScoreFormulaConfig {
+  if (!value || typeof value !== "object") return defaultCreditScoreFormula;
+  const raw = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(defaultCreditScoreFormula).map(([key, fallback]) => {
+      const current = Number(raw[key]);
+      return [key, Number.isFinite(current) ? current : fallback];
+    })
+  ) as CreditScoreFormulaConfig;
+}
+
+export function normalizeCreditScoreTiers(value: unknown): CreditScoreTierConfig[] {
+  if (!Array.isArray(value)) return defaultCreditScoreTiers;
+  const tiers = value
+    .map((tier) => {
+      if (!tier || typeof tier !== "object") return null;
+      const raw = tier as Record<string, unknown>;
+      const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "";
+      const label = typeof raw.label === "string" && raw.label.trim() ? raw.label.trim() : name;
+      const min_score = Number(raw.min_score);
+      const interest_rate = Number(raw.interest_rate);
+      const max_tenor_months = Number(raw.max_tenor_months);
+      const min_down_payment = Number(raw.min_down_payment);
+      if (!name || !label || !Number.isFinite(min_score)) return null;
+      return {
+        name,
+        label,
+        min_score,
+        interest_rate: Number.isFinite(interest_rate) ? interest_rate : 0,
+        max_tenor_months: Number.isFinite(max_tenor_months) ? max_tenor_months : 0,
+        min_down_payment: Number.isFinite(min_down_payment) ? min_down_payment : 0,
+      };
+    })
+    .filter((tier): tier is CreditScoreTierConfig => Boolean(tier))
+    .sort((a, b) => b.min_score - a.min_score);
+  return tiers.length ? tiers : defaultCreditScoreTiers;
+}
+
+function tierColor(name: string): string {
+  if (name === "private_bridge") return "#9ca3af";
+  if (name === "premium") return "#a855f7";
+  if (name === "core") return "#38bdf8";
+  return "#22c55e";
+}
+
+function tierNote(name: string): string {
+  if (name === "private_bridge") return "You're in our highest tier - reserved for top-performing financial profiles";
+  if (name === "premium") return "You have a strong financial profile with a low risk of default";
+  if (name === "core") return "You have a solid credit profile and good repayment history";
+  return "You meet our financing criteria and qualify for vehicle credit";
+}
+
+export function getCreditScoreTier(score: number, tiers: CreditScoreTierConfig[] = defaultCreditScoreTiers): CreditScoreTier {
+  const normalizedTiers = normalizeCreditScoreTiers(tiers);
+  const tier = normalizedTiers.find((item) => score >= item.min_score) ?? normalizedTiers[normalizedTiers.length - 1];
+  return {
+    name: tier.label,
+    color: tierColor(tier.name),
+    rate: `${tier.interest_rate}%${tier.name === "access" ? "+" : ""} p.a.`,
+    maxTenure: `${tier.max_tenor_months} month${tier.max_tenor_months === 1 ? "" : "s"}`,
+    minDownPayment: `${tier.min_down_payment}%`,
+    note: tierNote(tier.name),
+  };
 }
 
 export function calculateCreditScore({
@@ -286,27 +505,34 @@ export function calculateCreditScore({
   monthlyIncome,
   obligations,
   downPayment,
-}: CreditScoreInputs): number {
-  const selectedAverage =
-    creditScoreFieldKeys.reduce((sum, key) => sum + (values[key] ?? 0), 0) / creditScoreFieldKeys.length;
+  formConfig = defaultCreditScoreForm,
+  formula = defaultCreditScoreFormula,
+}: CreditScoreInputs & { formConfig?: CreditScoreFormConfig; formula?: CreditScoreFormulaConfig }): number {
+  const fieldKeys = getCreditScoreFieldKeys(formConfig);
+  const selectedAverage = fieldKeys.length
+    ? fieldKeys.reduce((sum, key) => sum + (values[key] ?? 0), 0) / fieldKeys.length
+    : 0;
 
-  const incomeBoost = Math.min(monthlyIncome / 100000000, 1) * 46;
-  const obligationPenalty = Math.min(obligations / 5000000, 1) * 34;
-  const downPaymentBoost = Math.min(downPayment / 70, 1) * 54;
-  const raw = 520 + selectedAverage * 3.2 + incomeBoost + downPaymentBoost - obligationPenalty;
+  const incomeBoost = Math.min(monthlyIncome / formula.income_boost_divisor, 1) * formula.income_boost_max;
+  const obligationPenalty = Math.min(obligations / formula.obligation_penalty_divisor, 1) * formula.obligation_penalty_max;
+  const downPaymentBoost = Math.min(downPayment / formula.down_payment_boost_divisor, 1) * formula.down_payment_boost_max;
+  const raw = formula.base_score + selectedAverage * formula.multiplier + incomeBoost + downPaymentBoost - obligationPenalty;
 
-  return Math.max(520, Math.min(910, Math.round(raw)));
+  return Math.max(formula.min_score, Math.min(formula.max_score, Math.round(raw)));
 }
 
 export function calculateCreditScoreCompletion({
   completedSelects,
   identityComplete,
+  formConfig = defaultCreditScoreForm,
 }: {
   completedSelects: number;
   identityComplete: boolean;
+  formConfig?: CreditScoreFormConfig;
 }): number {
   const completedIdentityFields = identityComplete ? 3 : 0;
-  return Math.round(((completedSelects + completedIdentityFields) / (creditScoreFieldKeys.length + 3)) * 100);
+  const totalFields = getCreditScoreFieldKeys(formConfig).length;
+  return Math.round(((completedSelects + completedIdentityFields) / (totalFields + 3)) * 100);
 }
 
 function averageSelectedFields(values: Record<string, number>, fieldKeys: string[]): number {
@@ -315,15 +541,19 @@ function averageSelectedFields(values: Record<string, number>, fieldKeys: string
   return selected.reduce((sum, value) => sum + value, 0) / selected.length;
 }
 
-export function getCreditScoreBreakdown(values: Record<string, number>): CreditScoreBreakdown[] {
-  return factorDefinitions.map((factor) => {
-    const factorScore = averageSelectedFields(values, factor.fieldKeys);
+export function getCreditScoreBreakdown(
+  values: Record<string, number>,
+  formConfig: CreditScoreFormConfig = defaultCreditScoreForm
+): CreditScoreBreakdown[] {
+  return formConfig.map((section) => {
+    const weight = sectionWeightToNumber(section.weight);
+    const factorScore = averageSelectedFields(values, section.fields.map((field) => field.key));
     return {
-      key: factor.key,
-      name: factor.name,
-      weight: factor.weight,
+      key: section.id,
+      name: section.title,
+      weight,
       score: Math.round(factorScore),
-      points: Math.round(factorScore * factor.weight * 6),
+      points: Math.round(factorScore * weight * 6),
     };
   });
 }
@@ -375,6 +605,7 @@ export function getApplicationUrl({
   employmentType,
   monthlyIncome,
   downPayment,
+  scoreId,
 }: {
   score: number;
   tier: string;
@@ -384,18 +615,22 @@ export function getApplicationUrl({
   employmentType?: string;
   monthlyIncome?: number;
   downPayment?: number;
+  scoreId?: string;
 }): string {
-  const params = new URLSearchParams({
-    score: String(score),
-    tier,
-  });
+  const params = new URLSearchParams();
 
-  if (firstName) params.set("firstName", firstName);
-  if (lastName) params.set("lastName", lastName);
-  if (email) params.set("email", email);
-  if (employmentType) params.set("employmentType", employmentType);
-  if (monthlyIncome !== undefined) params.set("monthlyIncome", String(monthlyIncome));
-  if (downPayment !== undefined) params.set("downPayment", String(downPayment));
+  if (scoreId) {
+    params.set("scoreId", scoreId);
+  } else {
+    params.set("score", String(score));
+    params.set("tier", tier);
+    if (firstName) params.set("firstName", firstName);
+    if (lastName) params.set("lastName", lastName);
+    if (email) params.set("email", email);
+    if (employmentType) params.set("employmentType", employmentType);
+    if (monthlyIncome !== undefined) params.set("monthlyIncome", String(monthlyIncome));
+    if (downPayment !== undefined) params.set("downPayment", String(downPayment));
+  }
 
   return `/application?${params.toString()}`;
 }
