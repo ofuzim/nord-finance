@@ -59,7 +59,6 @@ export async function sendApplicationConfirmation({
 
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 32px 0;" />
           <p style="color: #666; font-size: 13px; margin-bottom: 0;">
-            If you have any questions, reply to this email or contact us directly.<br />
             Nord Finance — Asset Finance Solutions
           </p>
         </div>

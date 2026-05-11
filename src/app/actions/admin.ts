@@ -84,6 +84,66 @@ export async function addApplicationNote({
   }
 }
 
+export async function deleteApplication({
+  applicationId,
+}: {
+  applicationId: string
+}): Promise<{ success: true } | { error: string }> {
+  try {
+    const admin = await getCurrentAdmin()
+    if (!admin) return { error: 'Unauthorized' }
+
+    const service = await createServiceClient()
+    const { data: app, error: appError } = await service
+      .from('applications')
+      .select('id')
+      .eq('id', applicationId)
+      .maybeSingle()
+
+    if (appError) return { error: appError.message }
+    if (!app) return { error: 'Application not found' }
+
+    const { data: documents, error: documentsError } = await service
+      .from('documents')
+      .select('storage_path')
+      .eq('application_id', applicationId)
+
+    if (documentsError) return { error: documentsError.message }
+
+    const storagePaths = (documents ?? [])
+      .map((doc) => doc.storage_path)
+      .filter((path): path is string => Boolean(path))
+
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await service.storage
+        .from('application-documents')
+        .remove(storagePaths)
+
+      if (storageError) return { error: storageError.message }
+    }
+
+    const { error: scoreError } = await service
+      .from('credit_scores')
+      .delete()
+      .eq('application_id', applicationId)
+
+    if (scoreError) return { error: scoreError.message }
+
+    const { error: deleteError } = await service
+      .from('applications')
+      .delete()
+      .eq('id', applicationId)
+
+    if (deleteError) return { error: deleteError.message }
+
+    revalidatePath('/admin/applications')
+    revalidatePath('/admin/dashboard')
+    return { success: true }
+  } catch (err) {
+    return { error: String(err) }
+  }
+}
+
 export async function inviteAdminUser({
   email,
   fullName,

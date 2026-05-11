@@ -149,7 +149,7 @@ export default async function ApplicationsPage({
                     )}
                   </td>
                   <td style={{ padding: '13px 20px' }}>
-                    <RowActions href={href} />
+                    <RowActions href={href} applicationId={app.id} referenceNumber={app.reference_number} />
                   </td>
                 </tr>
               )
