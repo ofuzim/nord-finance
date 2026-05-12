@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { vehicleByName, vehicles, type Vehicle } from "@/lib/vehicleCatalog";
+import { getVehicleByNameMap, vehicles, type Vehicle } from "@/lib/vehicleCatalog";
 
 const DEFAULT_CALC_MODEL = "Nord A5";
 
@@ -45,11 +45,6 @@ const TIERS = [
   },
 ];
 
-const vehicleOptionsByCategory = vehicles.reduce<Record<string, Vehicle[]>>((groups, vehicle) => {
-  groups[vehicle.groupCategory] = [...(groups[vehicle.groupCategory] ?? []), vehicle];
-  return groups;
-}, {});
-
 function formatNaira(amount: number): string {
   return "₦" + Math.round(amount).toLocaleString("en-NG");
 }
@@ -61,13 +56,18 @@ function calcMonthlyPayment(principal: number, annualRate: number, months: numbe
   return (principal * r * factor) / (factor - 1);
 }
 
-export function LoanCalculator() {
+export function LoanCalculator({ vehicleCatalog = vehicles }: { vehicleCatalog?: Vehicle[] }) {
   const [tierIdx, setTierIdx] = useState(0); // default: Access Tier
   const [selectedModel, setSelectedModel] = useState(DEFAULT_CALC_MODEL);
   const [tenure, setTenure] = useState(TIERS[0].tenures[0]);
+  const vehicleOptionsByCategory = useMemo(() => vehicleCatalog.reduce<Record<string, Vehicle[]>>((groups, vehicle) => {
+    groups[vehicle.groupCategory] = [...(groups[vehicle.groupCategory] ?? []), vehicle];
+    return groups;
+  }, {}), [vehicleCatalog]);
+  const vehicleByName = useMemo(() => getVehicleByNameMap(vehicleCatalog), [vehicleCatalog]);
 
   const selectedTier = TIERS[tierIdx];
-  const selectedVehicle = vehicleByName.get(selectedModel) ?? vehicles[0];
+  const selectedVehicle = vehicleByName.get(selectedModel) ?? vehicleCatalog[0] ?? vehicles[0];
   const vehiclePrice = selectedVehicle.priceValue;
   const downPaymentRate = selectedTier.downPaymentRate;
   const loanRate = 1 - downPaymentRate;

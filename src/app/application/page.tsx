@@ -12,7 +12,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function ApplicationPage() {
-  const { tiers, kycConfig } = await getCreditScoreRuntimeConfig()
+  const { tiers, kycConfig, vehicleCatalog } = await getCreditScoreRuntimeConfig()
 
   return (
     <div
@@ -25,7 +25,7 @@ export default async function ApplicationPage() {
     >
       <Navigation />
       <Suspense fallback={null}>
-        <ApplicationFormPage tiers={tiers} kycConfig={kycConfig} />
+        <ApplicationFormPage tiers={tiers} kycConfig={kycConfig} vehicleCatalog={vehicleCatalog} />
       </Suspense>
       <Footer />
     </div>

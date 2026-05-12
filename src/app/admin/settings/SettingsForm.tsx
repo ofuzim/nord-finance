@@ -1,8 +1,15 @@
 'use client'
 
 import React, { useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { updateCreditScoreConfig } from '@/app/actions/admin'
+import busOutline from '@/imports/bus-outline.svg'
+import pickupOutline from '@/imports/pick-up-outline.svg'
+import sedanOutline from '@/imports/sedan-outline.svg'
+import suvOutline from '@/imports/suv-outline.svg'
+import tavetOutline from '@/imports/tavet-outline.svg'
 import { defaultKycConfig, getKycGroupItems, kycFieldGroups, normalizeKycConfig, type KycConfig, type KycFieldItem } from '@/lib/kycConfig'
+import { defaultVehicleCatalog, normalizeVehicleCatalog, type Vehicle, type VehicleIconType } from '@/lib/vehicleCatalog'
 import {
   defaultCreditScoreForm,
   defaultCreditScoreFormula,
@@ -30,8 +37,9 @@ const FORMULA_LABELS: Record<string, string> = {
 }
 
 const PALETTE_DRAG_KEY = 'nord-palette-type'
+const MAX_VEHICLE_IMAGE_SIZE = 900_000
 
-type TabKey = 'form' | 'tiers' | 'formula' | 'kyc'
+export type TabKey = 'form' | 'tiers' | 'formula' | 'kyc' | 'cars'
 
 type DragState =
   | { type: 'section'; sectionIndex: number }
@@ -48,11 +56,36 @@ type KycDropIndicator = { groupIndex: number; insertBefore: number } | null
 
 type PendingLeaveAction = 'back' | 'reload'
 
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'form', label: 'Score' },
-  { key: 'tiers', label: 'Tiers' },
-  { key: 'formula', label: 'Params' },
-  { key: 'kyc', label: 'KYC' },
+const tabs: { key: TabKey; label: string; href: string }[] = [
+  { key: 'form', label: 'Score', href: '/admin/settings/scores' },
+  { key: 'tiers', label: 'Tiers', href: '/admin/settings/tiers' },
+  { key: 'formula', label: 'Params', href: '/admin/settings/params' },
+  { key: 'kyc', label: 'KYC', href: '/admin/settings/kyc' },
+  { key: 'cars', label: 'Cars', href: '/admin/settings/cars' },
+]
+
+const tabByPath = new Map(tabs.map((tab) => [tab.href, tab.key]))
+const vehicleIconSrc: Record<VehicleIconType, string> = {
+  sedan: sedanOutline.src,
+  coupe: sedanOutline.src,
+  suv: suvOutline.src,
+  pickup: pickupOutline.src,
+  bus: busOutline.src,
+  ev: tavetOutline.src,
+  van: busOutline.src,
+}
+
+const vehicleCategoryOptions: { category: string; groupCategory: string; icon: VehicleIconType }[] = [
+  { category: 'Sport Coupé', groupCategory: 'Sedans', icon: 'coupe' },
+  { category: 'Sedan', groupCategory: 'Sedans', icon: 'sedan' },
+  { category: 'SUV', groupCategory: 'SUVs', icon: 'suv' },
+  { category: 'Luxury SUV', groupCategory: 'SUVs', icon: 'suv' },
+  { category: 'Pickup', groupCategory: 'Pickup Trucks', icon: 'pickup' },
+  { category: 'Van / Bus', groupCategory: 'Buses', icon: 'van' },
+  { category: 'Coach Bus', groupCategory: 'Buses', icon: 'bus' },
+  { category: 'Compact City EV', groupCategory: 'Electric Vehicles', icon: 'ev' },
+  { category: 'Electric Sedan', groupCategory: 'Electric Vehicles', icon: 'ev' },
+  { category: 'Electric Logistics Van', groupCategory: 'Electric Vehicles', icon: 'van' },
 ]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -150,6 +183,25 @@ function kycPreviewSlot(groupIndex: number, insertBefore: number, dragging: KycD
 
 function configSnapshot(value: unknown): string {
   return JSON.stringify(value)
+}
+
+function readImageAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+function formatInteger(value: number): string {
+  if (!Number.isFinite(value)) return ''
+  return Math.round(value).toLocaleString('en-NG')
+}
+
+function parseInteger(value: string): number {
+  const digits = value.replace(/[^\d]/g, '')
+  return digits ? Number(digits) : 0
 }
 
 // ─── Primitive UI helpers ────────────────────────────────────────────────────
@@ -771,15 +823,16 @@ function SectionCard({ section, sectionIndex, dragging, dragActive, dropIndicato
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-export function SettingsForm({ initialConfig }: { initialConfig: Record<string, any> }) {
+export function SettingsForm({ initialConfig, initialTab = 'form' }: { initialConfig: Record<string, any>; initialTab?: TabKey }) {
   const userDefaults = initialConfig.user_default_config ?? null
   const initialFormSnapshot = useRef(configSnapshot(normalizeCreditScoreFormConfig(initialConfig.credit_score_form ?? defaultCreditScoreForm)))
 
-  const [activeTab, setActiveTab] = useState<TabKey>('form')
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
   const [formConfig, setFormConfig] = useState<CreditScoreFormConfig>(() => normalizeCreditScoreFormConfig(initialConfig.credit_score_form ?? defaultCreditScoreForm))
   const [tiers, setTiers] = useState<any[]>(() => normalizeCreditScoreTiers(initialConfig.score_tiers ?? defaultCreditScoreTiers))
   const [formula, setFormula] = useState<Record<string, number>>(() => normalizeCreditScoreFormula(initialConfig.score_formula ?? defaultCreditScoreFormula))
   const [kycConfig, setKycConfig] = useState<KycConfig>(() => normalizeKycConfig(initialConfig.kyc_config ?? defaultKycConfig))
+  const [vehicleCatalog, setVehicleCatalog] = useState<Vehicle[]>(() => normalizeVehicleCatalog(initialConfig.vehicle_catalog ?? defaultVehicleCatalog))
   const [dragging, setDragging] = useState<DragState>(null)
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -794,6 +847,7 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const [restoredBanner, setRestoredBanner] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const [removeVehicleIndex, setRemoveVehicleIndex] = useState<number | null>(null)
   const [pendingLeaveHref, setPendingLeaveHref] = useState<string | null>(null)
   const [pendingLeaveAction, setPendingLeaveAction] = useState<PendingLeaveAction>('back')
   const allowLeaveRef = useRef(false)
@@ -809,6 +863,26 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
   }, [formConfig])
   const weightOk = Math.abs(sectionWeightTotal - 100) < 0.5
   const weightOver = sectionWeightTotal > 100.5
+
+  React.useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      setActiveTab(tabByPath.get(window.location.pathname) ?? 'form')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const switchTab = (event: React.MouseEvent<HTMLAnchorElement>, tab: typeof tabs[number]) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+    event.preventDefault()
+    setActiveTab(tab.key)
+    window.history.pushState(null, '', tab.href)
+  }
 
   const save = async (key: string, value: unknown) => {
     setLoading((c) => ({ ...c, [key]: true }))
@@ -826,6 +900,7 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
       score_tiers: tiers,
       score_formula: formula,
       kyc_config: normalizeKycConfig(kycConfig),
+      vehicle_catalog: normalizeVehicleCatalog(vehicleCatalog),
     })
   }
 
@@ -836,6 +911,7 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
     setTiers(normalizeCreditScoreTiers(source.score_tiers ?? defaultCreditScoreTiers))
     setFormula(normalizeCreditScoreFormula(source.score_formula ?? defaultCreditScoreFormula))
     setKycConfig(normalizeKycConfig(source.kyc_config ?? defaultKycConfig))
+    setVehicleCatalog(normalizeVehicleCatalog(source.vehicle_catalog ?? defaultVehicleCatalog))
     setRestoredBanner(true)
     setTimeout(() => setRestoredBanner(false), 4000)
   }
@@ -942,6 +1018,7 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
       const target = event.target instanceof Element ? event.target.closest('a[href]') : null
       if (!(target instanceof HTMLAnchorElement)) return
       if (target.target && target.target !== '_self') return
+      if (target.pathname.startsWith('/admin/settings/')) return
       if (target.href === window.location.href) return
 
       event.preventDefault()
@@ -1003,6 +1080,54 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
     endDrag()
   }
 
+  const updateVehicle = (index: number, patch: Partial<Vehicle>) =>
+    setVehicleCatalog((catalog) => catalog.map((vehicle, i) => i === index ? { ...vehicle, ...patch } : vehicle))
+
+  const moveVehicle = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction
+    if (nextIndex < 0 || nextIndex >= vehicleCatalog.length) return
+    setVehicleCatalog((catalog) => reorder(catalog, index, nextIndex))
+  }
+
+  const addVehicle = () =>
+    setVehicleCatalog((catalog) => [
+      ...catalog,
+      {
+        id: `vehicle_${Date.now()}`,
+        name: 'New Vehicle',
+        icon: 'sedan',
+        category: 'Sedan',
+        groupCategory: 'Sedans',
+        brandName: 'Nord Motion',
+        site: '',
+        price: 'From ₦0',
+        priceValue: 0,
+        year: String(new Date().getFullYear()),
+        url: '',
+        enabled: true,
+      },
+    ])
+
+  const removeVehicle = async (index: number) => {
+    const nextCatalog = vehicleCatalog.filter((_, i) => i !== index)
+    setVehicleCatalog(nextCatalog)
+    setRemoveVehicleIndex(null)
+    await save('vehicle_catalog', normalizeVehicleCatalog(nextCatalog))
+  }
+
+  const uploadVehicleImage = async (index: number, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose a JPG, PNG, or WebP image.')
+      return
+    }
+    if (file.size > MAX_VEHICLE_IMAGE_SIZE) {
+      alert('Image is too large. Please use an image under 900KB.')
+      return
+    }
+    const imageDataUrl = await readImageAsDataUrl(file)
+    updateVehicle(index, { imageDataUrl, img: imageDataUrl, hideImage: false })
+  }
+
   return (
     <>
       <style>{`
@@ -1014,9 +1139,9 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'inline-flex', gap: 2, padding: 4, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}>
           {tabs.map((tab) => (
-            <button key={tab.key} type="button" className="settings-tab-btn" onClick={() => setActiveTab(tab.key)} style={{ backgroundColor: activeTab === tab.key ? '#C39529' : 'transparent', color: activeTab === tab.key ? '#000' : 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 7, padding: '9px 16px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.15s ease' }}>
+            <Link key={tab.key} href={tab.href} className="settings-tab-btn" onClick={(event) => switchTab(event, tab)} style={{ display: 'inline-block', backgroundColor: activeTab === tab.key ? '#C39529' : 'transparent', color: activeTab === tab.key ? '#000' : 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 7, padding: '9px 16px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.15s ease', textDecoration: 'none' }}>
               {tab.label}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
@@ -1256,6 +1381,143 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
         </div>
       )}
 
+      {/* ── Cars ── */}
+      {activeTab === 'cars' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 18 }}>
+            <div>
+              <p style={{ color: 'white', fontSize: 15, fontWeight: 600, marginBottom: 3 }}>Cars Catalog</p>
+              <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12 }}>Edit vehicle metadata, links, ordering, visibility, and images.</p>
+            </div>
+            <SaveButton loading={!!loading.vehicle_catalog} saved={!!saved.vehicle_catalog} onClick={() => save('vehicle_catalog', normalizeVehicleCatalog(vehicleCatalog))} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {vehicleCatalog.map((vehicle, index) => (
+              <div key={vehicle.id || index} style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, backgroundColor: vehicle.enabled === false ? 'rgba(255,255,255,0.015)' : 'rgba(255,255,255,0.025)', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 18, padding: 16 }}>
+                  <div>
+                    <div style={{ height: 96, borderRadius: 8, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 10 }}>
+                      {!vehicle.hideImage && (vehicle.imageDataUrl || vehicle.img) ? (
+                        <img src={vehicle.imageDataUrl || vehicle.img} alt={vehicle.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      ) : (
+                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle at 50% 45%, rgba(195,149,41,0.16), transparent 42%)' }}>
+                          <img
+                            src={vehicleIconSrc[vehicle.icon]}
+                            alt={`${vehicle.category} outline`}
+                            style={{
+                              width: '78%',
+                              height: 'auto',
+                              maxHeight: 58,
+                              objectFit: 'contain',
+                              filter: 'brightness(0) saturate(100%) invert(61%) sepia(57%) saturate(677%) hue-rotate(6deg) brightness(98%) contrast(95%)',
+                              opacity: 0.72,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <label style={{ display: 'block', border: '1px dashed rgba(195,149,41,0.35)', color: '#C39529', borderRadius: 7, padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', textAlign: 'center', cursor: 'pointer' }}>
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) uploadVehicleImage(index, file).catch(() => alert('Image upload failed.'))
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                    </label>
+                    <button type="button" onClick={() => updateVehicle(index, { imageDataUrl: undefined, img: undefined, hideImage: true })} style={{ marginTop: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', borderRadius: 7, padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', width: '100%' }}>
+                      Remove Image
+                    </button>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11, fontFamily: 'monospace' }}>#{index + 1}</span>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: vehicle.enabled === false ? 'rgba(255,255,255,0.35)' : '#22c55e', fontSize: 11 }}>
+                          <input type="checkbox" checked={vehicle.enabled !== false} onChange={(e) => updateVehicle(index, { enabled: e.target.checked })} />
+                          {vehicle.enabled === false ? 'Hidden' : 'Visible'}
+                        </label>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <IconBtn onClick={() => moveVehicle(index, -1)}>↑</IconBtn>
+                        <IconBtn onClick={() => moveVehicle(index, 1)}>↓</IconBtn>
+                        <IconBtn tone="danger" onClick={() => setRemoveVehicleIndex(index)}>Remove</IconBtn>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Name</p>
+                        <input value={vehicle.name} onChange={(e) => updateVehicle(index, { name: e.target.value })} style={inp()} />
+                      </div>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Category</p>
+                        <select
+                          value={vehicle.category}
+                          onChange={(e) => {
+                            const option = vehicleCategoryOptions.find((item) => item.category === e.target.value)
+                            if (option) updateVehicle(index, option)
+                          }}
+                          style={sel()}
+                        >
+                          {!vehicleCategoryOptions.some((item) => item.category === vehicle.category) && (
+                            <option value={vehicle.category}>{vehicle.category}</option>
+                          )}
+                          {vehicleCategoryOptions.map((option) => (
+                            <option key={option.category} value={option.category}>{option.category}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 110px', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Price label</p>
+                        <input value={vehicle.price} onChange={(e) => updateVehicle(index, { price: e.target.value })} style={inp()} />
+                      </div>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Price value</p>
+                        <input inputMode="numeric" value={formatInteger(vehicle.priceValue)} onChange={(e) => updateVehicle(index, { priceValue: parseInteger(e.target.value) })} style={inp()} />
+                      </div>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Year</p>
+                        <input value={vehicle.year} onChange={(e) => updateVehicle(index, { year: e.target.value })} style={inp()} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.75fr 1fr', gap: 10 }}>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Vehicle URL</p>
+                        <input value={vehicle.url} onChange={(e) => updateVehicle(index, { url: e.target.value })} style={inp()} />
+                      </div>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Car Brand</p>
+                        <input value={vehicle.brandName ?? ''} onChange={(e) => updateVehicle(index, { brandName: e.target.value })} style={inp()} />
+                      </div>
+                      <div>
+                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Brand site URL</p>
+                        <input value={vehicle.site} onChange={(e) => updateVehicle(index, { site: e.target.value })} style={inp()} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <IconBtn tone="add" onClick={addVehicle}>+ Add car</IconBtn>
+            <SaveButton loading={!!loading.vehicle_catalog} saved={!!saved.vehicle_catalog} onClick={() => save('vehicle_catalog', normalizeVehicleCatalog(vehicleCatalog))} />
+          </div>
+        </div>
+      )}
+
       {/* ── Defaults footer ── */}
       <div style={{ marginTop: 40, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
@@ -1338,6 +1600,81 @@ export function SettingsForm({ initialConfig }: { initialConfig: Record<string, 
                 }}
               >
                 Yes, Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removeVehicleIndex !== null && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 420,
+          backgroundColor: 'rgba(0,0,0,0.76)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}>
+          <div style={{
+            width: 'min(430px, 100%)',
+            backgroundColor: 'rgba(10,10,10,0.95)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: 18,
+            padding: '34px 32px',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+          }}>
+            <p style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 600, fontSize: 11,
+              letterSpacing: '0.22em', textTransform: 'uppercase',
+              color: '#C39529', marginBottom: 12,
+            }}>
+              Remove Car
+            </p>
+            <p style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 500, fontSize: 18, lineHeight: 1.3,
+              color: 'white', marginBottom: 10,
+            }}>
+              Remove {vehicleCatalog[removeVehicleIndex]?.name ?? 'this car'}?
+            </p>
+            <p style={{
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 400, fontSize: 13, lineHeight: 1.8,
+              color: 'rgba(255,255,255,0.58)', marginBottom: 28,
+            }}>
+              This removes it from the editable catalog. Save the Cars tab to apply the change.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setRemoveVehicleIndex(null)}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  background: 'transparent',
+                  color: 'rgba(255,255,255,0.5)',
+                  borderRadius: 100, padding: '12px 24px',
+                  fontSize: 11, fontWeight: 700,
+                  letterSpacing: '0.15em', textTransform: 'uppercase',
+                  cursor: 'pointer',
+                }}
+              >
+                Keep Car
+              </button>
+              <button
+                type="button"
+                onClick={() => removeVehicle(removeVehicleIndex)}
+                style={{
+                  border: '1px solid rgba(195,149,41,0.65)',
+                  background: '#C39529',
+                  color: '#000',
+                  borderRadius: 100, padding: '12px 24px',
+                  fontSize: 11, fontWeight: 800,
+                  letterSpacing: '0.15em', textTransform: 'uppercase',
+                  cursor: 'pointer',
+                }}
+              >
+                Remove
               </button>
             </div>
           </div>

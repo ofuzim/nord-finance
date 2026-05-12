@@ -71,8 +71,9 @@ export default function StatusPage() {
             <label style={{ display: 'block', fontSize: 10, fontWeight: 500, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 9 }}>
               Reference Number
             </label>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className="status-check-row" style={{ display: 'flex', gap: 12 }}>
               <input
+                className="status-ref-input"
                 type="text"
                 value={refInput}
                 onChange={e => setRefInput(e.target.value)}
@@ -85,13 +86,14 @@ export default function StatusPage() {
                   padding: '14px 16px',
                   color: 'white',
                   fontFamily: "'Poppins', sans-serif",
-                  fontSize: 14,
+                  fontSize: '1rem',
                   outline: 'none',
                   letterSpacing: '0.08em',
                   colorScheme: 'dark',
                 }}
               />
               <button
+                className="status-submit-button"
                 type="submit"
                 disabled={loading || !refInput.trim()}
                 style={{
@@ -205,6 +207,21 @@ export default function StatusPage() {
         </div>
       </main>
       <Footer />
+      <style>{`
+        .status-ref-input::placeholder {
+          font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+          .status-check-row {
+            flex-direction: column !important;
+          }
+
+          .status-submit-button {
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

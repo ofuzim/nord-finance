@@ -23,7 +23,7 @@ const tiers = [
       { label: "Interest Rate", value: "28%+ per annum" },
       { label: "Tenure", value: "12 – 48 months" },
       { label: "Down Payment", value: "30% minimum" },
-      { label: "Credit Score", value: "Below 700" },
+      { label: "Credit Score", value: "< 700" },
       { label: "Vehicle Range", value: "From ₦32.5M" },
     ],
     benefits: [
@@ -33,7 +33,7 @@ const tiers = [
       "Clear pathway to upgrade your tier on refinancing",
     ],
     requirements: [
-      "Nord Credit Score below 700",
+      "Nord Credit Score < 700",
       "Minimum 30% down payment",
       "Verifiable income — employed or self-employed",
       "Valid government-issued ID and BVN",
@@ -46,7 +46,7 @@ const tiers = [
     color: "#38bdf8",
     rate: "22%+",
     rateNote: "Per annum",
-    score: "700 – 800",
+    score: "700–799",
     features: [
       "12 – 24 month tenure",
       "Balanced risk profile",
@@ -58,7 +58,7 @@ const tiers = [
       { label: "Interest Rate", value: "22%+ per annum" },
       { label: "Tenure", value: "12 – 24 months" },
       { label: "Down Payment", value: "30% minimum" },
-      { label: "Credit Score", value: "700 – 800" },
+      { label: "Credit Score", value: "700–799" },
       { label: "Vehicle Range", value: "Full portfolio" },
     ],
     benefits: [
@@ -68,7 +68,7 @@ const tiers = [
       "Nord's primary financing tier — highest vehicle volume",
     ],
     requirements: [
-      "Nord Credit Score between 700 and 800",
+      "Nord Credit Score 700–799",
       "Minimum 30% down payment",
       "Stable and verifiable income",
       "Demonstrated repayment history",
@@ -81,7 +81,7 @@ const tiers = [
     color: "#a855f7",
     rate: "18%+",
     rateNote: "Per annum",
-    score: "800 – 850",
+    score: "800–849",
     featured: true,
     features: [
       "12 month tenure",
@@ -94,7 +94,7 @@ const tiers = [
       { label: "Interest Rate", value: "18%+ per annum" },
       { label: "Tenure", value: "12 months" },
       { label: "Down Payment", value: "40% minimum" },
-      { label: "Credit Score", value: "800 – 850" },
+      { label: "Credit Score", value: "800–849" },
       { label: "Vehicle Range", value: "Full portfolio" },
     ],
     benefits: [
@@ -104,7 +104,7 @@ const tiers = [
       "Access to the full vehicle range with premium terms",
     ],
     requirements: [
-      "Nord Credit Score between 800 and 850",
+      "Nord Credit Score 800–849",
       "Minimum 40% down payment",
       "Strong financial profile with low debt-to-income ratio",
       "Documented income and asset verification",

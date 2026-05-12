@@ -10,7 +10,7 @@ const NAV = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/applications', label: 'Applications', icon: FileText },
   { href: '/admin/team', label: 'Team', icon: Users, superOnly: true },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, superOnly: true },
+  { href: '/admin/settings/scores', label: 'Settings', icon: Settings, superOnly: true },
 ]
 
 const roleLabels: Record<string, string> = {
@@ -57,7 +57,9 @@ export function AdminSidebar({ admin }: { admin: AdminUser }) {
       {/* Nav */}
       <nav style={{ flex: 1, padding: '12px 10px' }}>
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== '/admin/dashboard' && pathname.startsWith(href))
+          const active = label === 'Settings'
+            ? pathname.startsWith('/admin/settings')
+            : pathname === href || (href !== '/admin/dashboard' && pathname.startsWith(href))
           return (
             <Link
               key={href}

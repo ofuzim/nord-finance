@@ -430,7 +430,7 @@ export function normalizeCreditScoreTiers(value: unknown): CreditScoreTierConfig
   return tiers.length ? tiers : defaultCreditScoreTiers;
 }
 
-function tierColor(name: string): string {
+export function creditScoreTierColor(name: string): string {
   if (name === "private_bridge") return "#9ca3af";
   if (name === "premium") return "#a855f7";
   if (name === "core") return "#38bdf8";
@@ -444,12 +444,47 @@ function tierNote(name: string): string {
   return "You meet our financing criteria and qualify for vehicle credit";
 }
 
-export function getCreditScoreTier(score: number, tiers: CreditScoreTierConfig[] = defaultCreditScoreTiers): CreditScoreTier {
+/** Which configured tier a numeric score maps to (same rule as the public calculator). */
+export function resolveCreditScoreTierConfig(
+  score: number,
+  tiers: CreditScoreTierConfig[] = defaultCreditScoreTiers
+): CreditScoreTierConfig {
   const normalizedTiers = normalizeCreditScoreTiers(tiers);
-  const tier = normalizedTiers.find((item) => score >= item.min_score) ?? normalizedTiers[normalizedTiers.length - 1];
+  return normalizedTiers.find((item) => score >= item.min_score) ?? normalizedTiers[normalizedTiers.length - 1];
+}
+
+export type CreditScoreTierChartBand = {
+  name: string;
+  /** Display name from Assessment Settings → Tiers (`label` field). */
+  tierLabel: string;
+  /** Numeric band derived from adjacent `min_score` thresholds in settings. */
+  rangeLabel: string;
+};
+
+/** Bands for admin charts: tier display names from settings plus score ranges from `min_score` order. */
+export function getCreditScoreTierChartBands(tiers: CreditScoreTierConfig[]): CreditScoreTierChartBand[] {
+  const asc = normalizeCreditScoreTiers(tiers)
+    .slice()
+    .sort((a, b) => a.min_score - b.min_score);
+  return asc.map((t, i) => {
+    const next = asc[i + 1];
+    let rangeLabel: string;
+    if (!next) {
+      rangeLabel = `${t.min_score}+`;
+    } else if (t.min_score === 0) {
+      rangeLabel = `< ${next.min_score}`;
+    } else {
+      rangeLabel = `${t.min_score}–${next.min_score - 1}`;
+    }
+    return { name: t.name, tierLabel: t.label, rangeLabel };
+  });
+}
+
+export function getCreditScoreTier(score: number, tiers: CreditScoreTierConfig[] = defaultCreditScoreTiers): CreditScoreTier {
+  const tier = resolveCreditScoreTierConfig(score, tiers);
   return {
     name: tier.label,
-    color: tierColor(tier.name),
+    color: creditScoreTierColor(tier.name),
     rate: `${tier.interest_rate}%+ p.a.`,
     maxTenure: `${tier.max_tenor_months} month${tier.max_tenor_months === 1 ? "" : "s"}`,
     minDownPayment: `${tier.min_down_payment}%`,

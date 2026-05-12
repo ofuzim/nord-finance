@@ -1,9 +1,16 @@
 import { requireAdmin } from '@/lib/admin'
+import {
+  creditScoreTierColor,
+  getCreditScoreTierChartBands,
+  normalizeCreditScoreTiers,
+  resolveCreditScoreTierConfig,
+} from '@/lib/creditScoreModel'
 import { createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import type { ApplicationStatus } from '@/types/database'
 import { ViewLink } from './ViewLink'
 import { NavStartLink } from '../applications/NavStartLink'
+import { DashboardCharts } from './DashboardCharts'
 
 const statusConfig: Record<ApplicationStatus, { label: string; color: string }> = {
   draft:        { label: 'Draft',        color: 'rgba(255,255,255,0.45)' },
@@ -14,18 +21,38 @@ const statusConfig: Record<ApplicationStatus, { label: string; color: string }> 
   withdrawn:    { label: 'Withdrawn',    color: 'rgba(255,255,255,0.45)' },
 }
 
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function dayLabel(key: string): string {
+  return new Date(`${key}T00:00:00`).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
+}
+
+const volumeRangeOptions = [
+  { key: '7d', days: 7 },
+  { key: '14d', days: 14 },
+  { key: '30d', days: 30 },
+  { key: '90d', days: 90 },
+  { key: '1y', days: 365 },
+] as const
+
 export default async function DashboardPage() {
   await requireAdmin()
   const service = await createServiceClient()
 
-  const [{ data: applications }, { data: recent }] = await Promise.all([
-    service.from('applications').select('status'),
+  const [{ data: applications }, { data: scores }, { data: recent }, { data: tierConfigRow }] = await Promise.all([
+    service.from('applications').select('status, created_at, submitted_at, vehicle_model'),
+    service.from('credit_scores').select('score, created_at'),
     service
       .from('applications')
       .select('id, reference_number, first_name, last_name, status, submitted_at, created_at, credit_scores(score, tier)')
       .order('created_at', { ascending: false })
       .limit(10),
+    service.from('credit_score_config').select('config_value').eq('config_key', 'score_tiers').maybeSingle(),
   ])
+
+  const tiers = normalizeCreditScoreTiers(tierConfigRow?.config_value)
 
   const counts = {
     total: applications?.length ?? 0,
@@ -41,6 +68,57 @@ export default async function DashboardPage() {
     { label: 'Under Review', value: counts.under_review, color: '#38bdf8' },
     { label: 'Approved', value: counts.approved, color: '#22c55e' },
   ]
+
+  const today = new Date()
+  const makeVolumeData = (rangeDays: number) => {
+    const days = Array.from({ length: rangeDays }, (_, i) => {
+      const date = new Date(today)
+      date.setDate(today.getDate() - (rangeDays - 1 - i))
+      return dayKey(date)
+    })
+
+    const volumeCounts = new Map(days.map((dateKey) => [dateKey, 0]))
+    ;(applications ?? []).forEach((app: any) => {
+      const dateValue = app.submitted_at || app.created_at
+      if (!dateValue) return
+      const dateKey = dayKey(new Date(dateValue))
+      if (volumeCounts.has(dateKey)) volumeCounts.set(dateKey, (volumeCounts.get(dateKey) ?? 0) + 1)
+    })
+
+    return days.map((dateKey) => ({ label: dayLabel(dateKey), applications: volumeCounts.get(dateKey) ?? 0 }))
+  }
+
+  const volumeRanges = {
+    '7d': makeVolumeData(7),
+    '14d': makeVolumeData(14),
+    '30d': makeVolumeData(30),
+    '90d': makeVolumeData(90),
+    '1y': makeVolumeData(365),
+  }
+
+  const scoreBands = getCreditScoreTierChartBands(tiers)
+  const scoreCounts = new Map(scoreBands.map((b) => [b.name, 0]))
+  ;(scores ?? []).forEach((item: any) => {
+    const tierName = resolveCreditScoreTierConfig(Number(item.score), tiers).name
+    scoreCounts.set(tierName, (scoreCounts.get(tierName) ?? 0) + 1)
+  })
+  const scoreData = scoreBands.map((band) => ({
+    tierName: band.name,
+    label: band.tierLabel,
+    rangeLabel: band.rangeLabel,
+    count: scoreCounts.get(band.name) ?? 0,
+    color: creditScoreTierColor(band.name),
+  }))
+
+  const vehicleCounts = new Map<string, number>()
+  ;(applications ?? []).forEach((app: any) => {
+    const model = app.vehicle_model || 'Unspecified'
+    vehicleCounts.set(model, (vehicleCounts.get(model) ?? 0) + 1)
+  })
+  const vehicleData = Array.from(vehicleCounts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
 
   return (
     <div>
@@ -71,6 +149,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      <DashboardCharts volumeRanges={volumeRanges} scoreData={scoreData} vehicleData={vehicleData} />
+
       {/* Recent applications */}
       <div style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -81,8 +161,21 @@ export default async function DashboardPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              {['Reference', 'Applicant', 'Score', 'Status', 'Date', ''].map(h => (
-                <th key={h} style={{ padding: '11px 22px', textAlign: 'left', color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{h}</th>
+              {['Reference', 'Applicant', 'Score', 'Status', 'Date', ''].map((h, i) => (
+                <th
+                  key={h || `col-${i}`}
+                  style={{
+                    padding: '11px 22px',
+                    textAlign: i === 5 ? 'right' : 'left',
+                    color: 'rgba(255,255,255,0.45)',
+                    fontSize: 10,
+                    fontWeight: 500,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -118,7 +211,7 @@ export default async function DashboardPage() {
                       <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>Created {new Date(app.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</span>
                     )}
                   </td>
-                  <td style={{ padding: '13px 22px' }}>
+                  <td style={{ padding: '13px 22px', textAlign: 'right', verticalAlign: 'middle' }}>
                     <ViewLink href={href} />
                   </td>
                 </tr>

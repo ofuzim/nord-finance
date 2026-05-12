@@ -8,8 +8,13 @@ import { LoanCalculator } from '@/components/LoanCalculator'
 import { FAQ } from '@/components/FAQ'
 import { CTABand } from '@/components/CTABand'
 import { Footer } from '@/components/Footer'
+import { getCreditScoreRuntimeConfig } from '@/lib/creditScoreConfig'
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  const { vehicleCatalog } = await getCreditScoreRuntimeConfig()
+
   return (
     <div
       style={{
@@ -21,11 +26,11 @@ export default function HomePage() {
     >
       <Navigation />
       <HashScroll />
-      <Hero />
+      <Hero vehicleCatalog={vehicleCatalog} />
 <HowItWorks />
       <WhatIsNord />
-      <CarShowcase />
-<LoanCalculator />
+      <CarShowcase vehicleCatalog={vehicleCatalog} />
+<LoanCalculator vehicleCatalog={vehicleCatalog} />
       <FAQ />
       <CTABand />
       <Footer />

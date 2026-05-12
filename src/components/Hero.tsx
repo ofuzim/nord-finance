@@ -3,15 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { NordCreditScoreWidget } from "./NordCreditScoreWidget";
-import { vehicleByName, type Vehicle } from "@/lib/vehicleCatalog";
+import { getVehicleByNameMap, vehicles, type Vehicle } from "@/lib/vehicleCatalog";
 import { VehicleModal } from "./VehicleModal";
 import heroBg from "../assets/vehicles/photos/nord-hero-collage.jpg";
-
-const marqueeNames = [
-  "Nord C3", "Nord A3", "Nord A5", "Nord A7", "Nord A9", "Nord C9", "Nord Demir", "Nord Max",
-  "Nord Tusk", "Nord Flit", "Nord Tripper", "Tavet Luto", "Tavet Garent", "Tavet Vant",
-];
-const heroMarqueeItems = [...marqueeNames, ...marqueeNames];
 
 const stats = [
   { value: "₦32.5M+", label: "Starting From" },
@@ -20,10 +14,24 @@ const stats = [
   { value: "48mo",     label: "Max Tenure"   },
 ];
 
-const getMarqueeCar = (name: string) => vehicleByName.get(name) ?? null;
-
-export function Hero() {
+export function Hero({ vehicleCatalog = vehicles }: { vehicleCatalog?: Vehicle[] }) {
   const [selectedCar, setSelectedCar] = useState<Vehicle | null>(null);
+  const [modalDirection, setModalDirection] = useState<"previous" | "next">("next");
+  const vehicleByName = getVehicleByNameMap(vehicleCatalog);
+  const marqueeNames = vehicleCatalog.map((vehicle) => vehicle.name);
+  const heroMarqueeItems = [...marqueeNames, ...marqueeNames];
+  const getMarqueeCar = (name: string) => vehicleByName.get(name) ?? null;
+  const selectedIndex = selectedCar ? vehicleCatalog.findIndex((vehicle) => vehicle.id === selectedCar.id || vehicle.name === selectedCar.name) : -1;
+  const showPreviousCar = () => {
+    if (selectedIndex < 0 || vehicleCatalog.length === 0) return;
+    setModalDirection("previous");
+    setSelectedCar(vehicleCatalog[(selectedIndex - 1 + vehicleCatalog.length) % vehicleCatalog.length]);
+  };
+  const showNextCar = () => {
+    if (selectedIndex < 0 || vehicleCatalog.length === 0) return;
+    setModalDirection("next");
+    setSelectedCar(vehicleCatalog[(selectedIndex + 1) % vehicleCatalog.length]);
+  };
 
   return (
     <section
@@ -365,11 +373,15 @@ export function Hero() {
                   role={car ? "button" : undefined}
                   tabIndex={car ? 0 : undefined}
                   onClick={() => {
-                    if (car) setSelectedCar(car);
+                    if (car) {
+                      setModalDirection("next");
+                      setSelectedCar(car);
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (car && (e.key === "Enter" || e.key === " ")) {
                       e.preventDefault();
+                      setModalDirection("next");
                       setSelectedCar(car);
                     }
                   }}
@@ -391,7 +403,15 @@ export function Hero() {
         </div>
       </div>
 
-      {selectedCar && <VehicleModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
+      {selectedCar && (
+        <VehicleModal
+          car={selectedCar}
+          onClose={() => setSelectedCar(null)}
+          onPrevious={vehicleCatalog.length > 1 ? showPreviousCar : undefined}
+          onNext={vehicleCatalog.length > 1 ? showNextCar : undefined}
+          direction={modalDirection}
+        />
+      )}
 
       <style>{`
         @keyframes heroMarquee {

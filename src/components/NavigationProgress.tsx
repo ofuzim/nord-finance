@@ -23,13 +23,14 @@ export function NavigationProgress() {
   useEffect(() => {
     if (pathname === prevPath.current) return
     prevPath.current = pathname
+    if (phase !== 'loading') return
     if (doneTimer.current) clearTimeout(doneTimer.current)
     setPhase('done')
     doneTimer.current = window.setTimeout(() => {
       setPhase('idle')
       doneTimer.current = null
     }, 550)
-  }, [pathname])
+  }, [pathname, phase])
 
   useEffect(() => () => { if (doneTimer.current) clearTimeout(doneTimer.current) }, [])
 

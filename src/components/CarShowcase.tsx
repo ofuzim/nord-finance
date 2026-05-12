@@ -17,14 +17,27 @@ function randomSample<T>(items: T[], limit: number): T[] {
   return shuffled.slice(0, limit);
 }
 
-export function CarShowcase() {
+export function CarShowcase({ vehicleCatalog = vehicles }: { vehicleCatalog?: Vehicle[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [collectionCars, setCollectionCars] = useState(() => vehicles.slice(0, COLLECTION_LIMIT));
+  const [collectionCars, setCollectionCars] = useState(() => vehicleCatalog.slice(0, COLLECTION_LIMIT));
   const [selectedCar, setSelectedCar] = useState<Vehicle | null>(null);
+  const [modalDirection, setModalDirection] = useState<"previous" | "next">("next");
 
   useEffect(() => {
-    setCollectionCars(randomSample(vehicles, COLLECTION_LIMIT));
-  }, []);
+    setCollectionCars(randomSample(vehicleCatalog, COLLECTION_LIMIT));
+  }, [vehicleCatalog]);
+
+  const selectedIndex = selectedCar ? collectionCars.findIndex((vehicle) => vehicle.id === selectedCar.id || vehicle.name === selectedCar.name) : -1;
+  const showPreviousCar = () => {
+    if (selectedIndex < 0 || collectionCars.length === 0) return;
+    setModalDirection("previous");
+    setSelectedCar(collectionCars[(selectedIndex - 1 + collectionCars.length) % collectionCars.length]);
+  };
+  const showNextCar = () => {
+    if (selectedIndex < 0 || collectionCars.length === 0) return;
+    setModalDirection("next");
+    setSelectedCar(collectionCars[(selectedIndex + 1) % collectionCars.length]);
+  };
 
   const scroll = (dir: "left" | "right") => {
     const track = scrollRef.current;
@@ -160,7 +173,10 @@ export function CarShowcase() {
         {collectionCars.map((car) => (
           <div
             key={car.name}
-            onClick={() => setSelectedCar(car)}
+            onClick={() => {
+              setModalDirection("next");
+              setSelectedCar(car);
+            }}
             style={{
               width: 320,
               minWidth: 320,
@@ -281,7 +297,15 @@ export function CarShowcase() {
         </a>
       </div>
 
-      {selectedCar && <VehicleModal car={selectedCar} onClose={() => setSelectedCar(null)} />}
+      {selectedCar && (
+        <VehicleModal
+          car={selectedCar}
+          onClose={() => setSelectedCar(null)}
+          onPrevious={collectionCars.length > 1 ? showPreviousCar : undefined}
+          onNext={collectionCars.length > 1 ? showNextCar : undefined}
+          direction={modalDirection}
+        />
+      )}
 
       <style>{`
         .showcase-track::-webkit-scrollbar { display: none; }

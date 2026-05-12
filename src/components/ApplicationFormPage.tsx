@@ -9,7 +9,7 @@ import sedanOutline from "@/imports/sedan-outline.svg";
 import suvOutline from "@/imports/suv-outline.svg";
 import pickupOutline from "@/imports/pick-up-outline.svg";
 import busOutline from "@/imports/bus-outline.svg";
-import { vehicleGroups } from "@/lib/vehicleCatalog";
+import { getVehicleGroups, vehicles, type Vehicle } from "@/lib/vehicleCatalog";
 import { getDocumentUploadUrl, saveDraftApplication, finalizeApplication, getDraftApplication, sendApplicationConfirmationEmail } from "@/app/actions/application";
 import { getCreditScoreById } from "@/app/actions/credit-score";
 import { defaultCreditScoreTiers, getCreditScoreTier, type CreditScoreTierConfig } from "@/lib/creditScoreModel";
@@ -704,7 +704,7 @@ function StepNav({
   );
 }
 
-export function ApplicationFormPage({ tiers = defaultCreditScoreTiers, kycConfig = defaultKycConfig }: { tiers?: CreditScoreTierConfig[]; kycConfig?: KycConfig }) {
+export function ApplicationFormPage({ tiers = defaultCreditScoreTiers, kycConfig = defaultKycConfig, vehicleCatalog = vehicles }: { tiers?: CreditScoreTierConfig[]; kycConfig?: KycConfig; vehicleCatalog?: Vehicle[] }) {
   const searchParams = useSearchParams();
   const carriedScore = searchParams.get("score");
   const carriedTier = searchParams.get("tier");
@@ -755,6 +755,7 @@ export function ApplicationFormPage({ tiers = defaultCreditScoreTiers, kycConfig
     downPayment: carriedDownPayment,
   });
   const req = useCallback((key: string) => isKycRequired(kycConfig, key), [kycConfig]);
+  const vehicleGroups = useMemo(() => getVehicleGroups(vehicleCatalog), [vehicleCatalog]);
   const kycItemsFor = useCallback((title: string) => {
     const group = kycGroupByTitle[title];
     return group ? getKycGroupItems(group, kycConfig).map(([key]) => key) : [];

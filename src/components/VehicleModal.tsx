@@ -68,9 +68,21 @@ export function VehicleArtwork({ car, variant = "modal" }: { car: Vehicle; varia
   );
 }
 
-export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => void }) {
+export function VehicleModal({
+  car,
+  onClose,
+  onPrevious,
+  onNext,
+  direction = "next",
+}: {
+  car: Vehicle;
+  onClose: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  direction?: "previous" | "next";
+}) {
   const [closing, setClosing] = useState(false);
-  const ctaLabel = car.site.includes("tavetmotion.com") ? "View on Tavet" : "View on Nord";
+  const ctaLabel = `View on ${car.brandName || (car.site.includes("tavetmotion.com") ? "Tavet" : "Nord")}`;
 
   const handleClose = () => {
     if (closing) return;
@@ -79,7 +91,11 @@ export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => vo
   };
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+      if (e.key === "ArrowLeft") onPrevious?.();
+      if (e.key === "ArrowRight") onNext?.();
+    };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
@@ -98,12 +114,27 @@ export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => vo
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
         display: "flex", alignItems: "center", justifyContent: "center",
+        gap: 78,
         padding: "24px 20px",
       }}
     >
+      {onPrevious && (
+        <button
+          type="button"
+          className="car-modal-nav car-modal-nav-prev"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrevious();
+          }}
+          aria-label="Previous vehicle"
+        >
+          ←
+        </button>
+      )}
       <div
+        key={car.id || car.name}
         onClick={(e) => e.stopPropagation()}
-        className={`car-modal-inner${closing ? " closing" : ""}`}
+        className={`car-modal-inner car-modal-slide-${direction}${closing ? " closing" : ""}`}
         style={{
           width: "100%",
           maxWidth: 680,
@@ -161,6 +192,19 @@ export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => vo
           }}
         >✕</button>
       </div>
+      {onNext && (
+        <button
+          type="button"
+          className="car-modal-nav car-modal-nav-next"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNext();
+          }}
+          aria-label="Next vehicle"
+        >
+          →
+        </button>
+      )}
 
       <style>{`
         @keyframes car-backdrop-in {
@@ -179,6 +223,14 @@ export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => vo
           from { opacity: 1; transform: scale(1) translateY(0); }
           to   { opacity: 0; transform: scale(0.96) translateY(120px); }
         }
+        @keyframes car-slide-next {
+          from { opacity: 0.35; transform: translateX(96px) scale(0.98); }
+          to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes car-slide-previous {
+          from { opacity: 0.35; transform: translateX(-96px) scale(0.98); }
+          to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
         @keyframes car-name-in {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -186,14 +238,58 @@ export function VehicleModal({ car, onClose }: { car: Vehicle; onClose: () => vo
         .car-modal-backdrop         { animation: car-backdrop-in 0.22s ease both; }
         .car-modal-backdrop.closing { animation: car-backdrop-out 0.18s ease 0.18s both; }
         .car-modal-inner            { animation: car-modal-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .car-modal-slide-next       { animation: car-slide-next 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .car-modal-slide-previous   { animation: car-slide-previous 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .car-modal-inner.closing    { animation: car-modal-out 0.24s cubic-bezier(0.55, 0, 1, 0.45) both; }
         .car-modal-name-block { animation: car-name-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both; }
         .car-modal-footer     { animation: car-name-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both; }
+        .car-modal-nav {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.18);
+          background: rgba(0,0,0,0.46);
+          color: rgba(255,255,255,0.86);
+          font-size: 19px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+          z-index: 2;
+          flex: 0 0 auto;
+        }
+        .car-modal-nav:hover {
+          color: #C39529;
+          border-color: rgba(195,149,41,0.55);
+          background: rgba(0,0,0,0.62);
+        }
         @media (max-width: 600px) {
+          .car-modal-backdrop {
+            background-color: rgba(0,0,0,0.52) !important;
+            flex-wrap: wrap;
+            align-content: center;
+            gap: 14px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+          }
+          .car-modal-inner {
+            order: 1;
+            flex: 0 0 100%;
+          }
           .car-modal-img-wrap { height: 280px !important; }
           .car-modal-name-block { padding: 20px 22px !important; }
           .car-modal-name-block p:last-child { font-size: 26px !important; }
           .car-modal-footer { padding: 16px 22px !important; }
+          .car-modal-nav {
+            order: 2;
+            margin-top: 6px;
+            width: 42px;
+            height: 42px;
+            font-size: 19px;
+          }
         }
       `}</style>
     </div>

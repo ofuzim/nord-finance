@@ -1033,7 +1033,7 @@ export function CreditScoreCalculatorPage({
                     if (item.itemType === 'slider') {
                       const sliderState = getSliderState(item.key);
                       return (
-                        <div key={item.key} style={{ gridColumn: 'span 2', marginBottom: 6 }}>
+                        <div key={item.key} className="score-slider-field" style={{ gridColumn: 'span 2', marginBottom: 6 }}>
                           <FieldLabel>{item.label}</FieldLabel>
                           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 18 }}>
                             <span style={{ fontSize: 11, color: "rgba(255,255,255,0.34)" }}>{item.minLabel}</span>
@@ -1274,6 +1274,10 @@ export function CreditScoreCalculatorPage({
           }
           .score-field-grid {
             grid-template-columns: 1fr !important;
+          }
+          .score-field-grid > *,
+          .score-slider-field {
+            grid-column: 1 / -1 !important;
           }
           .score-flow-grid {
             grid-template-columns: 1fr !important;
